@@ -1,0 +1,44 @@
+# BDWS workflow actions
+name: BDWS
+
+# The workflow is triggered on both push and pull requests.
+on: [push, pull_request]
+
+# Our workflow is made to run in parallel - multiple tasks
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    # Sequence of tasks that will be executed as part of job
+    steps:      
+      # Setup Go - this downloads the latest version (if necessary) to use
+      - name: Setup Go environment
+        uses: actions/setup-go@v2
+        with:
+          go-version: "1.14.0"
+      
+      # Checkout repo
+      - name: Checkout code in workspace
+        uses: actions/checkout@v2
+      
+      # Install Go dependencies
+      - name: Install Go dependencies
+        run: |
+          go version
+          go get -u golang.org/x/lint/golint
+          
+      # Run build of the Go application
+      - name: Build
+        run: go build -v .
+        
+      # Run Go vet & lint
+      # Vet examins Go source code & reports errors, including errors not 
+      # caught by the compiler, while Lint helps with style mistakes
+      - name: Run Vet & Lint
+        run: |
+          go vet .
+          golint .
+      
+      # Run tests
+      # Using test directory and Go tests
+      - name: Test
+        run: cd test && go test -v
