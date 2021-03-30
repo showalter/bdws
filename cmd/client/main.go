@@ -6,6 +6,9 @@ import (
 	"net/http"
 	"os"
 	"fmt"
+	"time"
+	"io/ioutil"
+	"github.com/showalter/bdws/internal/data"
 )
 
 // The entry point of the program
@@ -21,13 +24,17 @@ func main() {
 	}
 
 	// Open the file whose name was passed as an argument.
-	dat, err := os.Open(args[1])
+	code, err := ioutil.ReadFile(args[1])
 	if err != nil {
 		panic(err)
 	}
 
+	// Make a job with the given code.
+	jobBytes := data.JobToJson(1, time.Now(), 2, 1, 10, code)
+
 	// Send a post request to the worker.
-	resp, err := http.Post("http://127.0.0.1:39485/newjob", "text/plain", dat)
+	resp, err := http.Post("http://127.0.0.1:39480/newjob",
+		"text/plain", bytes.NewReader(jobBytes))
 	if err != nil {
 		panic(err)
 	}
