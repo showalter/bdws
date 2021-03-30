@@ -2,6 +2,7 @@
 package main
 
 import (
+	"os"
 	"bytes"
 	"net/http"
 	"fmt"
@@ -21,6 +22,8 @@ func new_job(w http.ResponseWriter, req *http.Request) {
 	buf.ReadFrom(req.Body)
 	file := buf.String()
 
+	// TODO: Run the job with the given arguments, sending the results back
+
 	// Print out the file.
 	fmt.Printf(file)
 
@@ -31,10 +34,19 @@ func new_job(w http.ResponseWriter, req *http.Request) {
 // The entry point of the program.
 func main() {
 
+	// The command line arguments. args[0] is the port to run on.
+	args := os.Args
+
+	// If there was no argument passed, ask for one and exit.
+	if len(args) == 1 {
+		fmt.Println("Please pass a port number. Eg. :38471")
+		os.Exit(1)
+	}
+
 	// If there is a request for /newjob,
 	// the new_job routine will handle it.
 	http.HandleFunc("/newjob", new_job)
 
 	// Listen on a port.
-	http.ListenAndServe(":39485", nil)
+	http.ListenAndServe(args[1], nil)
 }
