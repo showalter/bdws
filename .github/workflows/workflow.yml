@@ -31,6 +31,7 @@ jobs:
         run: |
           go build -v cmd/client/main.go
           go build -v cmd/worker/main.go
+          go build -v cmd/supervisor/main.go
         
       # Run Go vet & lint
       # Vet examins Go source code & reports errors, including errors not 
@@ -40,6 +41,7 @@ jobs:
         run: |
           go vet cmd/client/main.go
           go vet cmd/worker/main.go
+          go vet cmd/supervisor/main.go
           go vet test/main_test.go
       
       # Run tests
