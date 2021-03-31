@@ -2,11 +2,28 @@
 package main
 
 import (
-	"os"
 	"bytes"
-	"net/http"
 	"fmt"
+	"net/http"
+	"os"
+	"os/exec"
+
+	"github.com/showalter/bdws/internal/data"
 )
+
+// Check for an error.
+func check(e error) {
+	if e != nil {
+		panic(e)
+	}
+}
+
+// Run a given command.
+func run(command string, args string) []byte {
+	cmd, err := exec.Command(command, args).Output()
+	check(err)
+	return cmd
+}
 
 // Handle the submission of a new job.
 func new_job(w http.ResponseWriter, req *http.Request) {
@@ -20,12 +37,35 @@ func new_job(w http.ResponseWriter, req *http.Request) {
 	// Put the bytes from the request into a file
 	buf := new(bytes.Buffer)
 	buf.ReadFrom(req.Body)
-	file := buf.String()
+	jJson := buf.String()
 
-	// TODO: Run the job with the given arguments, sending the results back
+	// Convert string json to job struct
+	job := data.JsonToJob([]byte(jJson))
 
-	// Print out the file.
-	fmt.Printf(file)
+	// Create a temporary file
+	// TODO: Make this run with various extensions
+	scriptName := "tmp.sh"
+	f, err := os.Create(scriptName)
+	check(err)
+
+	_, err = f.Write(job.Code)
+	check(err)
+
+	f.Sync()
+	f.Close()
+
+	// Make temp file executable.
+	check(os.Chmod(scriptName, 0700))
+
+	// Execute temp file and print output.
+	cmd := run(("./" + scriptName), "")
+	fmt.Println(string(cmd))
+
+	// Remove temp file.
+	os.Remove(scriptName)
+
+	// Print out the json.
+	fmt.Println(jJson)
 
 	// Send a response back.
 	w.Write([]byte("Done"))
