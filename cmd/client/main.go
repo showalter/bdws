@@ -3,11 +3,12 @@ package main
 
 import (
 	"bytes"
+	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
-	"fmt"
 	"time"
-	"io/ioutil"
+
 	"github.com/showalter/bdws/internal/data"
 )
 
@@ -30,7 +31,7 @@ func main() {
 	}
 
 	// Make a job with the given code.
-	jobBytes := data.JobToJson(1, time.Now(), 2, 1, 10, code)
+	jobBytes := data.JobDataToJson(1, time.Now(), 2, 1, 10, code)
 
 	// Send a post request to the worker.
 	resp, err := http.Post("http://127.0.0.1:39480/newjob",
@@ -38,7 +39,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	
+
 	// Put the bytes from the request into a file
 	buf := new(bytes.Buffer)
 	buf.ReadFrom(resp.Body)
