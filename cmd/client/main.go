@@ -32,7 +32,12 @@ func main() {
 	}
 
 	// Get extension
-	extension := strings.Split(args[1], ".")[1]
+	extension := ""
+	if strings.HasPrefix(args[1], "./") {
+		extension = "./"
+	} else {
+		extension = strings.Split(args[1], ".")[1]
+	}
 
 	// Make a job with the given code.
 	jobBytes := data.JobDataToJson(1, time.Now(), 2, 1, 10, extension, code)

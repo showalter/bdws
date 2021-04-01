@@ -16,12 +16,12 @@ type codeFunction func([]byte) []byte
 
 // Map various extension names to their code
 var extensionMap = map[string]codeFunction{
-	"sh":    bashScript,
+	"sh":    script,
 	"py":    pythonScript,
 	"java":  javaFile,
 	"class": javaClass,
-	"jar":   nil,
-	"":      nil,
+	"jar":   jarFile,
+	"./":    script,
 }
 
 // run the code given an extension
@@ -97,11 +97,10 @@ func main() {
 
 /* Code Strategies */
 
-// Run a bash script
-func bashScript(code []byte) []byte {
+// create a tmp file with given name and write to it
+func createFile(name string, code []byte) {
 	// Create a temporary file
-	scriptName := "tmp.sh"
-	file, err := os.Create(scriptName)
+	file, err := os.Create(name)
 	check(err)
 
 	// Write to file
@@ -109,6 +108,13 @@ func bashScript(code []byte) []byte {
 	check(err)
 	file.Sync()
 	file.Close()
+}
+
+// Run a bash script / script
+func script(code []byte) []byte {
+	// Create a temporary file
+	scriptName := "tmp.sh"
+	createFile(scriptName, code)
 
 	// Make temp file executable.
 	check(os.Chmod(scriptName, 0700))
@@ -127,14 +133,7 @@ func javaClass(code []byte) []byte {
 
 	// Create temporary file
 	fileName := "tmp.class"
-	file, err := os.Create(fileName)
-	check(err)
-
-	// Write to file
-	_, err = file.Write(code)
-	check(err)
-	file.Sync()
-	file.Close()
+	createFile(fileName, code)
 
 	// Execute temp file.
 	output := run("java", "tmp")
@@ -151,14 +150,7 @@ func javaFile(code []byte) []byte {
 	// Create temporary java file
 	fileName := "tmp.java"
 	className := "tmp.class"
-	file, err := os.Create(fileName)
-	check(err)
-
-	// Write to java file
-	_, err = file.Write(code)
-	check(err)
-	file.Sync()
-	file.Close()
+	createFile(fileName, code)
 
 	// compile java file
 	run("javac", fileName)
@@ -177,19 +169,28 @@ func javaFile(code []byte) []byte {
 	return (javaClass(classCode))
 }
 
+// Run a jar file
+func jarFile(code []byte) []byte {
+
+	// Create temporary file
+	fileName := "tmp.jar"
+	createFile(fileName, code)
+
+	// Execute temp file.
+	output := run("java", "-jar "+fileName)
+
+	// Remove temp file
+	os.Remove(fileName)
+
+	return output
+}
+
 // Run a python script
 func pythonScript(code []byte) []byte {
 
 	// Create temporary file
 	scriptName := "tmp.py"
-	file, err := os.Create(scriptName)
-	check(err)
-
-	// Write to file
-	_, err = file.Write(code)
-	check(err)
-	file.Sync()
-	file.Close()
+	createFile(scriptName, code)
 
 	// Execute temp script.
 	output := run("python", scriptName)
