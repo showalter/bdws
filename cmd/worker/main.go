@@ -37,22 +37,22 @@ func new_job(w http.ResponseWriter, req *http.Request) {
 	// Put the bytes from the request into a file
 	buf := new(bytes.Buffer)
 	buf.ReadFrom(req.Body)
-	jJson := buf.String()
+	jobJson := buf.String()
 
 	// Convert string json to job struct
-	job := data.JsonToJob([]byte(jJson))
+	job := data.JsonToJob([]byte(jobJson))
 
 	// Create a temporary file
 	// TODO: Make this run with various extensions
 	scriptName := "tmp.sh"
-	f, err := os.Create(scriptName)
+	file, err := os.Create(scriptName)
 	check(err)
 
-	_, err = f.Write(job.Code)
+	_, err = file.Write(job.Code)
 	check(err)
 
-	f.Sync()
-	f.Close()
+	file.Sync()
+	file.Close()
 
 	// Make temp file executable.
 	check(os.Chmod(scriptName, 0700))
@@ -65,7 +65,7 @@ func new_job(w http.ResponseWriter, req *http.Request) {
 	os.Remove(scriptName)
 
 	// Print out the json.
-	fmt.Println(jJson)
+	fmt.Println(jobJson)
 
 	// Send a response back.
 	w.Write([]byte("Done"))
