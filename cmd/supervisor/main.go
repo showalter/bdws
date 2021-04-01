@@ -45,6 +45,7 @@ func new_job(w http.ResponseWriter, req *http.Request) {
 	argStart := job.ParameterStart
 	argEnd := argStart + argInterval
 
+	// array to store responses
 	var responses []byte
 
 	// Send the job to each worker
@@ -63,7 +64,6 @@ func new_job(w http.ResponseWriter, req *http.Request) {
 			panic(err)
 		}
 
-		// TODO: Collect all responses into one response to send back to the client.
 		// Put the bytes from the request into a file
 		buf := new(bytes.Buffer)
 		buf.ReadFrom(resp.Body)
