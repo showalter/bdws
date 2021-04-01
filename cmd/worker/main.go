@@ -59,7 +59,6 @@ func new_job(w http.ResponseWriter, req *http.Request) {
 
 	// Execute temp file and print output.
 	cmd := run(("./" + scriptName), "")
-	fmt.Println(string(cmd))
 
 	// Remove temp file.
 	os.Remove(scriptName)
@@ -68,7 +67,7 @@ func new_job(w http.ResponseWriter, req *http.Request) {
 	fmt.Println(jobJson)
 
 	// Send a response back.
-	w.Write([]byte("Done"))
+	w.Write(cmd)
 }
 
 // The entry point of the program.
