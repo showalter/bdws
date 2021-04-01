@@ -11,6 +11,29 @@ import (
 	"github.com/showalter/bdws/internal/data"
 )
 
+type codeFunction func([]byte) []byte
+type extension string
+
+// Map various extension names to their code
+var extensionMap = map[extension]codeFunction{
+	".sh":    bashScript,
+	".py":    nil,
+	".java":  nil,
+	".class": nil,
+	".jar":   nil,
+	"":       nil,
+}
+
+// run the code given an extension
+func runCode(e extension, code []byte) []byte {
+	f, found := extensionMap[e]
+	if found {
+		return f(code)
+	} else {
+		return []byte("Error: Extension not found.")
+	}
+}
+
 // Check for an error.
 func check(e error) {
 	if e != nil {
@@ -42,32 +65,14 @@ func new_job(w http.ResponseWriter, req *http.Request) {
 	// Convert string json to job struct
 	job := data.JsonToJob([]byte(jobJson))
 
-	// Create a temporary file
-	// TODO: Make this run with various extensions
-	scriptName := "tmp.sh"
-	file, err := os.Create(scriptName)
-	check(err)
-
-	_, err = file.Write(job.Code)
-	check(err)
-
-	file.Sync()
-	file.Close()
-
-	// Make temp file executable.
-	check(os.Chmod(scriptName, 0700))
-
-	// Execute temp file and print output.
-	cmd := run(("./" + scriptName), "")
-
-	// Remove temp file.
-	os.Remove(scriptName)
+	// Run the code and get []byte output
+	output := runCode(".sh", job.Code)
 
 	// Print out the json.
 	fmt.Println(jobJson)
 
 	// Send a response back.
-	w.Write(cmd)
+	w.Write(output)
 }
 
 // The entry point of the program.
@@ -88,4 +93,31 @@ func main() {
 
 	// Listen on a port.
 	http.ListenAndServe(args[1], nil)
+}
+
+/* Code Strategies */
+
+func bashScript(code []byte) []byte {
+	// Create a temporary file
+	// TODO: Make this run with various extensions
+	scriptName := "tmp.sh"
+	file, err := os.Create(scriptName)
+	check(err)
+
+	_, err = file.Write(code)
+	check(err)
+
+	file.Sync()
+	file.Close()
+
+	// Make temp file executable.
+	check(os.Chmod(scriptName, 0700))
+
+	// Execute temp file and print output.
+	cmd := run(("./" + scriptName), "")
+
+	// Remove temp file.
+	os.Remove(scriptName)
+
+	return cmd
 }
