@@ -1,3 +1,3 @@
 module github.com/showalter/bdws
 
-go 1.14
+go 1.13

@@ -3,22 +3,23 @@ package main
 
 import (
 	"bytes"
-	"net/http"
 	"fmt"
 	"io/ioutil"
+	"net/http"
+
 	"github.com/showalter/bdws/internal/data"
 )
 
 type Worker struct {
-    Id int64
-    Busy bool
+	Id       int64
+	Busy     bool
 	Hostname string
 }
 
 // TODO: Make the workers register with the supervisor on startup.
 // This way, we don't have to hard code the workers.
-var workers = [2]Worker { Worker {1, false, "http://127.0.0.1:39481"},
-					   Worker {2, false, "http://127.0.0.1:39482"} }
+var workers = [2]Worker{Worker{1, false, "http://127.0.0.1:39481"},
+	Worker{2, false, "http://127.0.0.1:39482"}}
 
 // Handle the submission of a new job.
 func new_job(w http.ResponseWriter, req *http.Request) {
@@ -44,6 +45,9 @@ func new_job(w http.ResponseWriter, req *http.Request) {
 	argStart := job.ParameterStart
 	argEnd := argStart + argInterval
 
+	// array to store responses
+	var responses []byte
+
 	// Send the job to each worker
 	for _, w := range workers {
 		job.ParameterStart = argStart
@@ -54,24 +58,20 @@ func new_job(w http.ResponseWriter, req *http.Request) {
 
 		jobBytes := data.JobToJson(job)
 
-		resp, err := http.Post(w.Hostname + "/newjob",
+		resp, err := http.Post(w.Hostname+"/newjob",
 			"text/plain", bytes.NewReader(jobBytes))
 		if err != nil {
 			panic(err)
 		}
 
-		// TODO: Collect all responses into one response to send back to the client.
 		// Put the bytes from the request into a file
 		buf := new(bytes.Buffer)
 		buf.ReadFrom(resp.Body)
-		file := buf.String()
-
-		fmt.Println(file)
-
+		responses = append(responses, buf.Bytes()...)
 	}
 
 	// Send a response back.
-	w.Write([]byte("Done"))
+	w.Write(responses)
 }
 
 // The entry point of the program.

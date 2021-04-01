@@ -14,7 +14,7 @@ jobs:
       - name: Setup Go environment
         uses: actions/setup-go@v2
         with:
-          go-version: "1.14.0"
+          go-version: "1.13.8"
       
       # Checkout repo
       - name: Checkout code in workspace
