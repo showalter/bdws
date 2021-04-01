@@ -63,6 +63,7 @@ type Job struct {
 	Machines       int64
 	ParameterStart int64
 	ParameterEnd   int64
+	FileName       string
 	Extension      string
 	Code           []byte
 }
@@ -87,10 +88,10 @@ func JobToJson(job Job) []byte {
  * Saves a Job information into json
  */
 func JobDataToJson(id int64, time time.Time, machines int64,
-	parameterStart int64, parameterEnd int64, extension string, code []byte) []byte {
+	parameterStart int64, parameterEnd int64, fileName string, extension string, code []byte) []byte {
 
 	// Create Job Object
-	j := Job{id, time, machines, parameterStart, parameterEnd, extension, code}
+	j := Job{id, time, machines, parameterStart, parameterEnd, fileName, extension, code}
 
 	return JobToJson(j)
 }

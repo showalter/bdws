@@ -8,11 +8,12 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/showalter/bdws/internal/data"
 )
 
-type codeFunction func([]byte) []byte
+type codeFunction func([]byte, string) []byte
 
 // Map various extension names to their code
 var extensionMap = map[string]codeFunction{
@@ -21,14 +22,14 @@ var extensionMap = map[string]codeFunction{
 	"java":  javaFile,
 	"class": javaClass,
 	"jar":   jarFile,
-	"./":    script,
+	"none":  script,
 }
 
 // run the code given an extension
-func runCode(e string, code []byte) []byte {
+func runCode(e string, code []byte, fn string) []byte {
 	f, found := extensionMap[e]
 	if found {
-		return f(code)
+		return f(code, fn)
 	} else {
 		return []byte("Error: Extension not found.")
 	}
@@ -62,14 +63,14 @@ func new_job(w http.ResponseWriter, req *http.Request) {
 	buf.ReadFrom(req.Body)
 	jobJson := buf.String()
 
+	// Print out the json.
+	fmt.Println(jobJson)
+
 	// Convert string json to job struct
 	job := data.JsonToJob([]byte(jobJson))
 
 	// Run the code and get []byte output
-	output := runCode(job.Extension, job.Code)
-
-	// Print out the json.
-	fmt.Println(jobJson)
+	output := runCode(job.Extension, job.Code, job.FileName)
 
 	// Send a response back.
 	w.Write(output)
@@ -111,32 +112,30 @@ func createFile(name string, code []byte) {
 }
 
 // Run a bash script / script
-func script(code []byte) []byte {
+func script(code []byte, fileName string) []byte {
 	// Create a temporary file
-	scriptName := "tmp.sh"
-	createFile(scriptName, code)
+	createFile(fileName, code)
 
 	// Make temp file executable.
-	check(os.Chmod(scriptName, 0700))
+	check(os.Chmod(fileName, 0700))
 
 	// Execute temp file.
-	output := run(("./" + scriptName), "")
+	output := run(("./" + fileName), "")
 
 	// Remove temp file.
-	os.Remove(scriptName)
+	os.Remove(fileName)
 
 	return output
 }
 
 // Run a .class file
-func javaClass(code []byte) []byte {
+func javaClass(code []byte, fileName string) []byte {
 
 	// Create temporary file
-	fileName := "tmp.class"
 	createFile(fileName, code)
 
 	// Execute temp file.
-	output := run("java", "tmp")
+	output := run("java", strings.Split(fileName, ".")[0])
 
 	// Remove temp file
 	os.Remove(fileName)
@@ -145,11 +144,10 @@ func javaClass(code []byte) []byte {
 }
 
 // Run a .java file
-func javaFile(code []byte) []byte {
+func javaFile(code []byte, fileName string) []byte {
 
 	// Create temporary java file
-	fileName := "tmp.java"
-	className := "tmp.class"
+	className := strings.Split(fileName, ".")[0] + ".class"
 	createFile(fileName, code)
 
 	// compile java file
@@ -166,14 +164,13 @@ func javaFile(code []byte) []byte {
 	os.Remove(className)
 
 	// Return output
-	return (javaClass(classCode))
+	return (javaClass(classCode, className))
 }
 
 // Run a jar file
-func jarFile(code []byte) []byte {
+func jarFile(code []byte, fileName string) []byte {
 
 	// Create temporary file
-	fileName := "tmp.jar"
 	createFile(fileName, code)
 
 	// Execute temp file.
@@ -186,17 +183,16 @@ func jarFile(code []byte) []byte {
 }
 
 // Run a python script
-func pythonScript(code []byte) []byte {
+func pythonScript(code []byte, fileName string) []byte {
 
 	// Create temporary file
-	scriptName := "tmp.py"
-	createFile(scriptName, code)
+	createFile(fileName, code)
 
 	// Execute temp script.
-	output := run("python", scriptName)
+	output := run("python3", fileName)
 
 	// Remove temp script
-	os.Remove(scriptName)
+	os.Remove(fileName)
 
 	return output
 }

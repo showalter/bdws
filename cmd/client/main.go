@@ -31,16 +31,17 @@ func main() {
 		panic(err)
 	}
 
-	// Get extension
+	// Get extension and file name
+	fileName := args[1]
 	extension := ""
-	if strings.HasPrefix(args[1], "./") {
-		extension = "./"
-	} else {
+	if strings.Contains(args[1], ".") {
 		extension = strings.Split(args[1], ".")[1]
+	} else {
+		extension = "none"
 	}
 
 	// Make a job with the given code.
-	jobBytes := data.JobDataToJson(1, time.Now(), 2, 1, 10, extension, code)
+	jobBytes := data.JobDataToJson(1, time.Now(), 2, 1, 10, fileName, extension, code)
 
 	// Send a post request to the worker.
 	resp, err := http.Post("http://127.0.0.1:39480/newjob",
