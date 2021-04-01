@@ -4,6 +4,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"os/exec"
@@ -12,20 +13,19 @@ import (
 )
 
 type codeFunction func([]byte) []byte
-type extension string
 
 // Map various extension names to their code
-var extensionMap = map[extension]codeFunction{
-	".sh":    bashScript,
-	".py":    nil,
-	".java":  nil,
-	".class": nil,
-	".jar":   nil,
-	"":       nil,
+var extensionMap = map[string]codeFunction{
+	"sh":    bashScript,
+	"py":    pythonScript,
+	"java":  javaFile,
+	"class": javaClass,
+	"jar":   nil,
+	"":      nil,
 }
 
 // run the code given an extension
-func runCode(e extension, code []byte) []byte {
+func runCode(e string, code []byte) []byte {
 	f, found := extensionMap[e]
 	if found {
 		return f(code)
@@ -43,9 +43,9 @@ func check(e error) {
 
 // Run a given command.
 func run(command string, args string) []byte {
-	cmd, err := exec.Command(command, args).Output()
+	output, err := exec.Command(command, args).Output()
 	check(err)
-	return cmd
+	return output
 }
 
 // Handle the submission of a new job.
@@ -66,7 +66,7 @@ func new_job(w http.ResponseWriter, req *http.Request) {
 	job := data.JsonToJob([]byte(jobJson))
 
 	// Run the code and get []byte output
-	output := runCode(".sh", job.Code)
+	output := runCode(job.Extension, job.Code)
 
 	// Print out the json.
 	fmt.Println(jobJson)
@@ -97,27 +97,105 @@ func main() {
 
 /* Code Strategies */
 
+// Run a bash script
 func bashScript(code []byte) []byte {
 	// Create a temporary file
-	// TODO: Make this run with various extensions
 	scriptName := "tmp.sh"
 	file, err := os.Create(scriptName)
 	check(err)
 
+	// Write to file
 	_, err = file.Write(code)
 	check(err)
-
 	file.Sync()
 	file.Close()
 
 	// Make temp file executable.
 	check(os.Chmod(scriptName, 0700))
 
-	// Execute temp file and print output.
-	cmd := run(("./" + scriptName), "")
+	// Execute temp file.
+	output := run(("./" + scriptName), "")
 
 	// Remove temp file.
 	os.Remove(scriptName)
 
-	return cmd
+	return output
+}
+
+// Run a .class file
+func javaClass(code []byte) []byte {
+
+	// Create temporary file
+	fileName := "tmp.class"
+	file, err := os.Create(fileName)
+	check(err)
+
+	// Write to file
+	_, err = file.Write(code)
+	check(err)
+	file.Sync()
+	file.Close()
+
+	// Execute temp file.
+	output := run("java", "tmp")
+
+	// Remove temp file
+	os.Remove(fileName)
+
+	return output
+}
+
+// Run a .java file
+func javaFile(code []byte) []byte {
+
+	// Create temporary java file
+	fileName := "tmp.java"
+	className := "tmp.class"
+	file, err := os.Create(fileName)
+	check(err)
+
+	// Write to java file
+	_, err = file.Write(code)
+	check(err)
+	file.Sync()
+	file.Close()
+
+	// compile java file
+	run("javac", fileName)
+
+	// get []byte code from class file
+	classCode, err := ioutil.ReadFile(className)
+	if err != nil {
+		panic(err)
+	}
+
+	// Remove the temp files
+	os.Remove(fileName)
+	os.Remove(className)
+
+	// Return output
+	return (javaClass(classCode))
+}
+
+// Run a python script
+func pythonScript(code []byte) []byte {
+
+	// Create temporary file
+	scriptName := "tmp.py"
+	file, err := os.Create(scriptName)
+	check(err)
+
+	// Write to file
+	_, err = file.Write(code)
+	check(err)
+	file.Sync()
+	file.Close()
+
+	// Execute temp script.
+	output := run("python", scriptName)
+
+	// Remove temp script
+	os.Remove(scriptName)
+
+	return output
 }

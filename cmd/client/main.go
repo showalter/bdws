@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/showalter/bdws/internal/data"
@@ -30,8 +31,11 @@ func main() {
 		panic(err)
 	}
 
+	// Get extension
+	extension := strings.Split(args[1], ".")[1]
+
 	// Make a job with the given code.
-	jobBytes := data.JobDataToJson(1, time.Now(), 2, 1, 10, code)
+	jobBytes := data.JobDataToJson(1, time.Now(), 2, 1, 10, extension, code)
 
 	// Send a post request to the worker.
 	resp, err := http.Post("http://127.0.0.1:39480/newjob",
