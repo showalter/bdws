@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
+	"strings"
 
 	"github.com/showalter/bdws/internal/data"
 )
@@ -16,10 +18,8 @@ type Worker struct {
 	Hostname string
 }
 
-// TODO: Make the workers register with the supervisor on startup.
-// This way, we don't have to hard code the workers.
-var workers = [2]Worker{Worker{1, false, "http://127.0.0.1:39481"},
-	Worker{2, false, "http://127.0.0.1:39482"}}
+var workers []data.Worker
+var workerCounter int64 = 1
 
 // Handle the submission of a new job.
 func new_job(w http.ResponseWriter, req *http.Request) {
@@ -58,7 +58,7 @@ func new_job(w http.ResponseWriter, req *http.Request) {
 
 		jobBytes := data.JobToJson(job)
 
-		resp, err := http.Post(w.Hostname+"/newjob",
+		resp, err := http.Post("http://"+w.Hostname+"/newjob",
 			"text/plain", bytes.NewReader(jobBytes))
 		if err != nil {
 			panic(err)
@@ -74,13 +74,67 @@ func new_job(w http.ResponseWriter, req *http.Request) {
 	w.Write(responses)
 }
 
+// Look through a list and add the item if it isn't in the list already.
+// This is slow for big lists, but there won't likely be a large number of workers.
+func appendIfUnique(list []data.Worker, w data.Worker) []data.Worker {
+	for _, x := range list {
+		if x.Hostname == w.Hostname {
+			return list
+		}
+	}
+
+	return append(list, w)
+}
+
+// Handle a worker registering to receive work
+func register(w http.ResponseWriter, req *http.Request) {
+	fmt.Println("Handling registration...")
+
+	// Parse the HTTP request.
+	if err := req.ParseForm(); err != nil {
+		panic(err)
+	}
+
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(req.Body)
+
+	// The worker will send the port they'll be listening on
+	port := buf.String()
+
+	// Replace the port number for the sender
+	split := strings.Split(req.RemoteAddr, ":")
+	split[len(split) - 1] = port
+
+	worker := data.Worker{Id: workerCounter, Busy: false,
+		Hostname: strings.Join(split, ":")}
+
+	workerCounter += 1
+
+	// We don't need multiple workers with the same hostname.
+	workers = appendIfUnique(workers, worker)
+
+	w.Write(data.WorkerToJson(worker))
+}
+
 // The entry point of the program.
 func main() {
+
+	// The command line arguments. args[0] is the port to run on.
+	args := os.Args
+
+	// If the right number of arguments weren't passed, ask for them.
+	if len(args) != 2 {
+		fmt.Println("Please pass the port to run on preceded by a colon. eg. :4001")
+		os.Exit(1)
+	}
 
 	// If there is a request for /newjob,
 	// the new_job routine will handle it.
 	http.HandleFunc("/newjob", new_job)
 
+	// Handle requests for /register with the register function
+	http.HandleFunc("/register", register)
+
 	// Listen on a port.
-	http.ListenAndServe(":39480", nil)
+	http.ListenAndServe(args[1], nil)
 }

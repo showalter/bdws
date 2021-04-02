@@ -110,3 +110,53 @@ func JsonToJob(b []byte) Job {
     }
     return j
 }
+
+type Worker struct {
+    Id int64
+    Busy bool
+	Hostname string
+}
+
+/**
+ * Saves a Worker information into json
+ */
+ func WorkerToJson(worker Worker) []byte{
+
+    // Save c as json byte array
+    b, err := json.Marshal(worker)
+
+    // Exit on error, otherwise return b
+    if err != nil {
+        log.Println(err)
+        os.Exit(-1)
+    }
+    return b
+}
+
+/**
+ * Saves a Worker information into json
+ */
+ func WorkerDataToJson(id int64, busy bool, hostname string) []byte{
+
+    // Create Worker Object
+    w := Worker{id, busy, hostname}
+
+    return WorkerToJson(w)
+}
+
+/**
+ * Coverts a []byte of json into a Worker struct
+ */
+func JsonToWorker(b []byte) Worker {
+    var w Worker
+
+    // Unmarshall b into Worker w
+    err := json.Unmarshal(b, &w)
+
+    // Exit on error, otherwise return j
+    if err != nil {
+        log.Println(err)
+        os.Exit(-1)
+    }
+    return w
+}

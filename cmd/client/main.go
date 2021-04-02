@@ -18,14 +18,15 @@ func main() {
 	// The command line arguments. args[0] is the name of the program.
 	args := os.Args
 
-	// If there was no argument passed, ask for one and exit.
-	if len(args) == 1 {
-		fmt.Println("Please pass a file name to send to the server.")
+	// If the right number of arguments weren't passed, ask for them and exit.
+	if len(args) != 3 {
+		fmt.Println("Please pass the address of the supervisor and a file to run.")
+		fmt.Println("Example: http://stu.cs.jmu.edu:4001 fun_code.py")
 		os.Exit(1)
 	}
 
 	// Open the file whose name was passed as an argument.
-	code, err := ioutil.ReadFile(args[1])
+	code, err := ioutil.ReadFile(args[2])
 	if err != nil {
 		panic(err)
 	}
@@ -34,7 +35,7 @@ func main() {
 	jobBytes := data.JobDataToJson(1, time.Now(), 2, 1, 10, code)
 
 	// Send a post request to the worker.
-	resp, err := http.Post("http://127.0.0.1:39480/newjob",
+	resp, err := http.Post(args[1]+"/newjob",
 		"text/plain", bytes.NewReader(jobBytes))
 	if err != nil {
 		panic(err)
