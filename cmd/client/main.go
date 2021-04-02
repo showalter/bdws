@@ -34,11 +34,11 @@ func main() {
 	}
 
 	// Get extension and file name
-	fullPath := strings.Split(args[1], "/")
+	fullPath := strings.Split(args[2], "/")
 	fileName := fullPath[len(fullPath)-1]
 	extension := ""
-	if strings.Contains(args[1], ".") {
-		extension = strings.Split(args[1], ".")[1]
+	if strings.Contains(args[2], ".") {
+		extension = strings.Split(args[2], ".")[1]
 	} else {
 		extension = "none"
 	}
