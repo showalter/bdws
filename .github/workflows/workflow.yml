@@ -43,6 +43,9 @@ jobs:
           go vet cmd/worker/main.go
           go vet cmd/supervisor/main.go
           go vet test/main_test.go
+          golint cmd/client/main.go
+          golint cmd/worker/main.go
+          golint cmd/supervisor/main.go
       
       # Run tests
       # Using test directory and Go tests
