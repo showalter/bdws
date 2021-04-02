@@ -28,11 +28,13 @@ func main() {
 	// Open the file whose name was passed as an argument.
 	code, err := ioutil.ReadFile(args[1])
 	if err != nil {
-		panic(err)
+		fmt.Println("Error opening file. Aborting")
+		os.Exit(3)
 	}
 
 	// Get extension and file name
-	fileName := args[1]
+	fullPath := strings.Split(args[1], "/")
+	fileName := fullPath[len(fullPath)-1]
 	extension := ""
 	if strings.Contains(args[1], ".") {
 		extension = strings.Split(args[1], ".")[1]
@@ -47,7 +49,8 @@ func main() {
 	resp, err := http.Post("http://127.0.0.1:39480/newjob",
 		"text/plain", bytes.NewReader(jobBytes))
 	if err != nil {
-		panic(err)
+		fmt.Println("Error posting job. Aborting")
+		os.Exit(3)
 	}
 
 	// Put the bytes from the request into a file
