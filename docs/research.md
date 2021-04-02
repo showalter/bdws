@@ -1,6 +1,6 @@
 # The Basic Distributed Work System
 
-#### Bradley Fellstrom, Ryan Showalter, Zachary Tucker, Jack Twomey
+## Bradley Fellstrom, Ryan Showalter, Zachary Tucker, Jack Twomey
 
 &nbsp;  
 &nbsp;
