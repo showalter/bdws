@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/showalter/bdws/internal/data"
@@ -27,17 +28,29 @@ func main() {
 	// Open the file whose name was passed as an argument.
 	code, err := ioutil.ReadFile(args[1])
 	if err != nil {
-		panic(err)
+		fmt.Println("Error opening file. Aborting")
+		os.Exit(3)
+	}
+
+	// Get extension and file name
+	fullPath := strings.Split(args[1], "/")
+	fileName := fullPath[len(fullPath)-1]
+	extension := ""
+	if strings.Contains(args[1], ".") {
+		extension = strings.Split(args[1], ".")[1]
+	} else {
+		extension = "none"
 	}
 
 	// Make a job with the given code.
-	jobBytes := data.JobDataToJson(1, time.Now(), 2, 1, 10, code)
+	jobBytes := data.JobDataToJson(1, time.Now(), 2, 1, 10, fileName, extension, code)
 
 	// Send a post request to the worker.
 	resp, err := http.Post("http://127.0.0.1:39480/newjob",
 		"text/plain", bytes.NewReader(jobBytes))
 	if err != nil {
-		panic(err)
+		fmt.Println("Error posting job. Aborting")
+		os.Exit(3)
 	}
 
 	// Put the bytes from the request into a file
