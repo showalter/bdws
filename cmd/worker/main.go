@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"log"
 	"os"
 	"os/exec"
 	"strings"
@@ -79,21 +80,34 @@ func new_job(w http.ResponseWriter, req *http.Request) {
 // The entry point of the program.
 func main() {
 
-	// The command line arguments. args[0] is the port to run on.
+	// The command line arguments. args[1] is the supervisor address,
+	// args[2] is the port to run on
 	args := os.Args
 
-	// If there was no argument passed, ask for one and exit.
-	if len(args) == 1 {
-		fmt.Println("Please pass a port number. Eg. :38471")
+	// If the right number of arguments weren't passed, ask for them.
+	if len(args) != 3 {
+		fmt.Println("Please pass the hostname of the supervisor and the outgoing port." +
+			"eg. http://stu.cs.jmu.edu:4001 4031")
 		os.Exit(1)
 	}
+
+	resp, err := http.Post(args[1] + "/register", "text/plain", strings.NewReader(args[2]))
+	if err != nil {
+		panic(err)
+	}
+
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(resp.Body)
+
+	// This gives what the supervisor thinks the worker is, which is useful for debugging.
+	_ = data.JsonToWorker(buf.Bytes())
 
 	// If there is a request for /newjob,
 	// the new_job routine will handle it.
 	http.HandleFunc("/newjob", new_job)
 
 	// Listen on a port.
-	http.ListenAndServe(args[1], nil)
+	log.Fatal(http.ListenAndServe(":"+args[2], nil))
 }
 
 /* Code Strategies */
