@@ -36,7 +36,7 @@ func main() {
 	if extension == "executable" {
 		code = nil
 	} else {
-		// File is not an executable, so copy code
+		// File is not an binary executable, so copy code
 		// Open the file whose name was passed as an argument.
 		var err error
 		code, err = ioutil.ReadFile(args[2])
@@ -84,7 +84,7 @@ func findAbsolute(fileName string) string {
 	out, err = exec.LookPath(fileName)
 
 	// If file is not a binary, try to find abs path
-	if err != nil {
+	if err != nil || !filepath.IsAbs(out) {
 		out, err = filepath.Abs(fileName)
 		check(err)
 	}
@@ -96,6 +96,7 @@ func findAbsolute(fileName string) string {
 // Get the filename and extension type of a file
 func getFileName(arg string) (string, string) {
 	abs := findAbsolute(arg)
+	fmt.Println(abs)
 
 	// Get file name
 	fullPath := strings.Split(abs, "/")
@@ -104,10 +105,12 @@ func getFileName(arg string) (string, string) {
 	// Find file type
 	var extension string
 
-	if strings.Contains(abs, ".") {
+	if strings.Contains(fileName, ".") { // file has extension
 		extension = strings.Split(fileName, ".")[1]
-	} else if !strings.Contains(abs, "home") { // file is an executable
+
+	} else if !strings.Contains(abs, "/home") { // file is not in home dir
 		extension = "executable"
+
 	} else { // file is in home dir
 		extension = "none"
 	}
