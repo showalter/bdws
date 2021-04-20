@@ -108,7 +108,7 @@ func getFileName(arg string) (string, string) {
 	if strings.Contains(fileName, ".") { // file has extension
 		extension = strings.Split(fileName, ".")[1]
 
-	} else if !strings.Contains(abs, "/home") { // file is not in home dir
+	} else if !strings.Contains(abs, os.Getenv("HOME")) { // file is not in home dir
 		extension = "executable"
 
 	} else { // file is in home dir
