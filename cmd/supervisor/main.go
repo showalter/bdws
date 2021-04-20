@@ -60,14 +60,12 @@ func new_job(w http.ResponseWriter, req *http.Request) {
 
 		resp, err := http.Post("http://"+w.Hostname+"/newjob",
 			"text/plain", bytes.NewReader(jobBytes))
-		if err != nil {
-			panic(err)
+		if err == nil {
+			// Put the bytes from the request into a file
+			buf := new(bytes.Buffer)
+			buf.ReadFrom(resp.Body)
+			responses = append(responses, buf.Bytes()...)
 		}
-
-		// Put the bytes from the request into a file
-		buf := new(bytes.Buffer)
-		buf.ReadFrom(resp.Body)
-		responses = append(responses, buf.Bytes()...)
 	}
 
 	// Send a response back.
@@ -103,7 +101,7 @@ func register(w http.ResponseWriter, req *http.Request) {
 
 	// Replace the port number for the sender
 	split := strings.Split(req.RemoteAddr, ":")
-	split[len(split) - 1] = port
+	split[len(split)-1] = port
 
 	worker := data.Worker{Id: workerCounter, Busy: false,
 		Hostname: strings.Join(split, ":")}
