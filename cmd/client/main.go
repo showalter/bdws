@@ -80,7 +80,14 @@ func findAbsolute(fileName string) string {
 	var out string
 	var err error
 
-	// First check if file is a binary
+	// Check if file is in current directory
+	pwd, _ := os.Getwd()
+
+	if _, err := os.Stat(pwd + "/" + fileName); err == nil {
+		return pwd + "/" + fileName
+	}
+
+	// Check if file is a binary
 	out, err = exec.LookPath(fileName)
 
 	// If file is not a binary, try to find abs path
