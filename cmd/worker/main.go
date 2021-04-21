@@ -5,8 +5,8 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	"log"
+	"net/http"
 	"os"
 	"os/exec"
 	"strings"
@@ -18,12 +18,13 @@ type codeFunction func([]byte, string) []byte
 
 // Map various extension names to their code
 var extensionMap = map[string]codeFunction{
-	"sh":    script,
-	"py":    pythonScript,
-	"java":  javaFile,
-	"class": javaClass,
-	"jar":   jarFile,
-	"none":  script,
+	"sh":         script,
+	"py":         pythonScript,
+	"java":       javaFile,
+	"class":      javaClass,
+	"jar":        jarFile,
+	"none":       script,
+	"executable": execute,
 }
 
 // run the code given an extension
@@ -44,8 +45,8 @@ func check(e error) {
 }
 
 // Run a given command.
-func run(command string, args string) []byte {
-	output, err := exec.Command(command, args).Output()
+func run(command string, args ...string) []byte {
+	output, err := exec.Command(command, args...).Output()
 	check(err)
 	return output
 }
@@ -91,7 +92,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	resp, err := http.Post(args[1] + "/register", "text/plain", strings.NewReader(args[2]))
+	resp, err := http.Post(args[1]+"/register", "text/plain", strings.NewReader(args[2]))
 	if err != nil {
 		panic(err)
 	}
@@ -207,6 +208,12 @@ func pythonScript(code []byte, fileName string) []byte {
 
 	// Remove temp script
 	os.Remove(fileName)
+
+	return output
+}
+
+func execute(code []byte, fileName string) []byte {
+	output := run(fileName)
 
 	return output
 }
