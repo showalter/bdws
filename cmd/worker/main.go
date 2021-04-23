@@ -27,6 +27,8 @@ var extensionMap = map[string]codeFunction{
 	"executable": execute,
 }
 
+var workerDirectory string
+
 // run the code given an extension
 func runCode(e string, code []byte, fn string) []byte {
 	f, found := extensionMap[e]
@@ -72,7 +74,9 @@ func new_job(w http.ResponseWriter, req *http.Request) {
 	job := data.JsonToJob([]byte(jobJson))
 
 	// Run the code and get []byte output
-	output := runCode(job.Extension, job.Code, job.FileName)
+	output := runCode(job.Extension, job.Code, workerDirectory+"/"+job.FileName)
+
+	fmt.Printf(string(output))
 
 	// Send a response back.
 	w.Write(output)
@@ -102,6 +106,14 @@ func main() {
 
 	// This gives what the supervisor thinks the worker is, which is useful for debugging.
 	_ = data.JsonToWorker(buf.Bytes())
+
+
+	workerDirectory = args[2]
+
+	if _, err = os.Stat(workerDirectory); os.IsNotExist(err) {
+		err = os.Mkdir(args[2], 755)
+		check(err)
+	}
 
 	// If there is a request for /newjob,
 	// the new_job routine will handle it.
