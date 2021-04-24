@@ -14,6 +14,7 @@ import (
 	"github.com/showalter/bdws/internal/data"
 )
 
+// A worker and its associated mutex.
 type ProtectedWorker struct {
 	worker data.Worker
 	mutex *sync.Mutex
@@ -28,7 +29,7 @@ func workerHandler(pWorker ProtectedWorker, job data.Job, args chan int64, resul
 	
 	for arg := range args {
 
-		fmt.Printf("Starting an arg.\n")
+		// Claim this worker so no other job can use it simultaneously
 		pWorker.mutex.Lock()
 
 		job.ParameterStart = arg
@@ -38,15 +39,14 @@ func workerHandler(pWorker ProtectedWorker, job data.Job, args chan int64, resul
 		resp, err := http.Post("http://"+pWorker.worker.Hostname+"/newjob",
 			"text/plain", bytes.NewReader(jobBytes))
 		if err == nil {
+			
 			// Put the bytes from the request into a file
 			buf := new(bytes.Buffer)
 			buf.ReadFrom(resp.Body)
 
-			fmt.Printf("About to write to channel!\n")
 			results <- buf.String()
 
 		} else {
-			fmt.Printf("Error!!!!!\n")
 			// Write the argument back to the channel so this worker can try it again
 			// or another worker can try it.
 			args <- arg
@@ -56,8 +56,6 @@ func workerHandler(pWorker ProtectedWorker, job data.Job, args chan int64, resul
 			// immediately for it to fail again.
 			time.Sleep(time.Millisecond * 250)
 		}
-
-		fmt.Printf("Done with an arg.\n")
 
 		pWorker.mutex.Unlock()
 	}
@@ -81,24 +79,36 @@ func new_job(w http.ResponseWriter, req *http.Request) {
 
 	job := data.JsonToJob(buf)
 
+	// Make a sized buffer for arguments
 	args := make(chan int64, job.ParameterEnd - job.ParameterStart + 1)
+	
+	// Buffer for the results
 	results := make(chan string)
 
 	var responses string
 
+	// Set up a worker goroutine for each of the workers
 	for _, w := range workers {
 		go workerHandler(w, job, args, results)
 	}
 
+	// If numbered parameters are not used, we need this to still issue the job.
+	if (job.ParameterEnd < job.ParameterStart) {
+		args <- 0
+		responses += <-results
+	}
+
+	// Put each argument in the buffer
 	for i := job.ParameterStart; i <= job.ParameterEnd; i++ {
 		args <- i
 	}
 
+	// Retrieve each response.
 	for i := job.ParameterStart; i <= job.ParameterEnd; i++ {
 		responses += <-results
-		fmt.Printf("Got some results\n")
 	}
 
+	// Close the argument buffer
 	close(args)
 
 	// Send a response back.

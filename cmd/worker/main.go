@@ -9,31 +9,32 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 
 	"github.com/showalter/bdws/internal/data"
 )
 
-type codeFunction func([]byte, string) []byte
+type codeFunction func([]byte, string, *int64) []byte
 
 // Map various extension names to their code
 var extensionMap = map[string]codeFunction{
-	"sh":         script,
-	"py":         pythonScript,
-	"java":       javaFile,
-	"class":      javaClass,
-	"jar":        jarFile,
-	"none":       script,
-	"executable": execute,
+	"sh":             script,
+	"py":             pythonScript,
+	"java":           javaFile,
+	"class":          javaClass,
+	"jar":            jarFile,
+	"none":           script,
+	"system program": system_program,
 }
 
 var workerDirectory string
 
 // run the code given an extension
-func runCode(e string, code []byte, fn string) []byte {
+func runCode(e string, code []byte, fn string, arg *int64) []byte {
 	f, found := extensionMap[e]
 	if found {
-		return f(code, fn)
+		return f(code, fn, arg)
 	} else {
 		return []byte("Error: Extension not found.")
 	}
@@ -48,7 +49,8 @@ func check(e error) {
 
 // Run a given command.
 func run(command string, args ...string) []byte {
-	output, err := exec.Command(command, args...).Output()
+
+	output, err := exec.Command(command, args...).CombinedOutput()
 	check(err)
 	return output
 }
@@ -73,10 +75,14 @@ func new_job(w http.ResponseWriter, req *http.Request) {
 	// Convert string json to job struct
 	job := data.JsonToJob([]byte(jobJson))
 
-	// Run the code and get []byte output
-	output := runCode(job.Extension, job.Code, workerDirectory+"/"+job.FileName)
+	var arg *int64 = nil
 
-	fmt.Printf(string(output))
+	if job.ParameterEnd >= job.ParameterStart {
+		arg = &job.ParameterStart
+	}
+
+	// Run the code and get []byte output
+	output := runCode(job.Extension, job.Code, job.FileName, arg)
 
 	// Send a response back.
 	w.Write(output)
@@ -108,8 +114,9 @@ func main() {
 	_ = data.JsonToWorker(buf.Bytes())
 
 
+	// Make a directory for this worker, to avoid IO errors from workers writing and reading to
+	// the same file.
 	workerDirectory = args[2]
-
 	if _, err = os.Stat(workerDirectory); os.IsNotExist(err) {
 		err = os.Mkdir(args[2], 755)
 		check(err)
@@ -139,93 +146,153 @@ func createFile(name string, code []byte) {
 }
 
 // Run a bash script / script
-func script(code []byte, fileName string) []byte {
+func script(code []byte, fileName string, arg *int64) []byte {
+
+	var output []byte
+
+	fullName := workerDirectory+"/"+fileName
+
 	// Create a temporary file
-	createFile(fileName, code)
+	createFile(fullName, code)
 
 	// Make temp file executable.
-	check(os.Chmod(fileName, 0700))
+	check(os.Chmod(fullName, 0700))
 
 	// Execute temp file.
-	output := run(("./" + fileName), "")
+	if arg != nil {
+		output = run(fullName, strconv.FormatInt(*arg, 10))
+	} else {
+		output = run(fullName, "")
+	}
 
 	// Remove temp file.
-	os.Remove(fileName)
+	// os.Remove(fullName)
 
 	return output
 }
 
 // Run a .class file
-func javaClass(code []byte, fileName string) []byte {
+func javaClass(code []byte, fileName string, arg *int64) []byte {
+
+	var output []byte
+
+	fullName := workerDirectory+"/"+fileName
 
 	// Create temporary file
-	createFile(fileName, code)
+	createFile(fullName, code)
 
 	// Execute temp file.
-	output := run("java", strings.Split(fileName, ".")[0])
+	if arg != nil {
+		output = run("java", "-cp", workerDirectory, strings.Split(fileName, ".")[0],
+			strconv.FormatInt(*arg, 10))
+	} else {
+		output = run("java", "-cp", workerDirectory, strings.Split(fileName, ".")[0])
+	}
 
 	// Remove temp file
-	os.Remove(fileName)
+	// os.Remove(fullName)
 
 	return output
 }
 
 // Run a .java file
-func javaFile(code []byte, fileName string) []byte {
+func javaFile(code []byte, fileName string, arg *int64) []byte {
+
+	fullName := workerDirectory+"/"+fileName
 
 	// Create temporary java file
 	className := strings.Split(fileName, ".")[0] + ".class"
-	createFile(fileName, code)
 
-	// compile java file
-	run("javac", fileName)
+	_, err := os.Stat(fullName)
+    if os.IsNotExist(err) {
+        createFile(fullName, code)
+		
+		// compile java file
+		run("javac", fullName)
+
+    } else {
+		existingCode, err := ioutil.ReadFile(fullName)
+		check(err)
+
+		if !bytes.Equal(existingCode, code) {
+			createFile(fullName, code)
+
+			// compile java file
+			run("javac", fullName)
+		}
+	}
+
 
 	// get []byte code from class file
-	classCode, err := ioutil.ReadFile(className)
+	classCode, err := ioutil.ReadFile(workerDirectory+"/"+className)
 	if err != nil {
 		panic(err)
 	}
 
 	// Remove the temp files
-	os.Remove(fileName)
-	os.Remove(className)
+	// os.Remove(fullName)
+	// os.Remove(workerDirectory+"/"+className)
 
 	// Return output
-	return (javaClass(classCode, className))
+	return (javaClass(classCode, className, arg))
 }
 
 // Run a jar file
-func jarFile(code []byte, fileName string) []byte {
+func jarFile(code []byte, fileName string, arg *int64) []byte {
+
+	var output []byte
+
+	fullName := workerDirectory+"/"+fileName
 
 	// Create temporary file
-	createFile(fileName, code)
+	createFile(fullName, code)
 
 	// Execute temp file.
-	output := run("java", "-jar "+fileName)
+	if arg != nil {
+		output = run("java", "-jar "+fullName, strconv.FormatInt(*arg, 10))
+	} else {
+		output = run("java", "-jar "+fullName)
+	}
 
 	// Remove temp file
-	os.Remove(fileName)
+	// os.Remove(fullName)
 
 	return output
 }
 
 // Run a python script
-func pythonScript(code []byte, fileName string) []byte {
+func pythonScript(code []byte, fileName string, arg *int64) []byte {
+
+	var output []byte
+
+	fullName := workerDirectory+"/"+fileName
 
 	// Create temporary file
-	createFile(fileName, code)
+	createFile(fullName, code)
 
 	// Execute temp script.
-	output := run("python3", fileName)
+	if arg != nil {
+		output = run("python3", fullName, strconv.FormatInt(*arg, 10))
+	} else {
+		output = run("python3", fullName)
+	}
 
 	// Remove temp script
-	os.Remove(fileName)
+	// os.Remove(fullName)
 
 	return output
 }
 
-func execute(code []byte, fileName string) []byte {
-	output := run(fileName)
+// Run a system program
+func system_program(code []byte, fileName string, arg *int64) []byte {
+
+	var output []byte
+
+	if arg != nil {
+		output = run(fileName, strconv.FormatInt(*arg, 10))
+	} else {
+		output = run(fileName)
+	}
 
 	return output
 }
