@@ -67,6 +67,8 @@ func parseCommandLine() (string, string, int64, int64, []string, int64) {
 	rangePtr := flag.String("range", "NONE", "Range for job")
 	runsPtr := flag.Int64("runs", 1, "Number of times to run job")
 	flag.Parse()
+
+	// Non optional command line argsgi
 	tail := flag.Args()
 
 	// If the right number of arguments weren't passed, ask for them and exit.
