@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -18,14 +19,36 @@ import (
 // The entry point of the program
 func main() {
 
+	// A start index greater than the end index indicates the program should be run once
+	// with no parameters.
+	var start int64 = 0
+	var end int64 = -1
+
+	var err error
+
 	// The command line arguments. args[0] is the name of the program.
 	args := os.Args
 
 	// If the right number of arguments weren't passed, ask for them and exit.
-	if len(args) != 3 {
-		fmt.Println("Please pass the address of the supervisor and a file to run.")
-		fmt.Println("Example: http://stu.cs.jmu.edu:4001 fun_code.py")
+	if len(args) < 3 {
+		fmt.Println("Please pass the address of the supervisor and a file to run, and an optional range of parameters.")
+		fmt.Println("Example: http://stu.cs.jmu.edu:4001 fun_code.py [1-10]")
 		os.Exit(1)
+	}
+
+	// Collect arguments if they're given
+	if len(args) == 4 {
+		split := strings.Split(args[3], "-")
+		if len(split) != 2 {
+			fmt.Println("Please give the parameter range as two dash-delimited numbers. For example, 1-100")
+			os.Exit(1)
+		}
+
+		start, err = strconv.ParseInt(split[0], 10, 64)
+		check(err)
+
+		end, err = strconv.ParseInt(split[1], 10, 64)
+		check(err)
 	}
 
 	// Get extension and file name
@@ -33,7 +56,7 @@ func main() {
 
 	// Code is unessesary to send if executable exists
 	var code []byte
-	if extension == "executable" {
+	if extension == "system program" {
 		code = nil
 	} else {
 		// File is not an binary executable, so copy code
@@ -47,7 +70,7 @@ func main() {
 	}
 
 	// Make a job with the given code.
-	jobBytes := data.JobDataToJson(1, time.Now(), 2, 1, 10, fileName, extension, code)
+	jobBytes := data.JobDataToJson(1, time.Now(), 2, start, end, fileName, extension, code)
 
 	// Send a post request to the supervisor.
 	resp, err := http.Post(args[1]+"/newjob",
@@ -116,8 +139,7 @@ func getFileName(arg string) (string, string) {
 		extension = strings.Split(fileName, ".")[1]
 
 	} else if !strings.Contains(abs, os.Getenv("HOME")) { // file is not in home dir
-		extension = "executable"
-
+		extension = "system program"
 	} else { // file is in home dir
 		extension = "none"
 	}

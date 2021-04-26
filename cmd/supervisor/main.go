@@ -8,21 +8,62 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/showalter/bdws/internal/data"
 )
 
-type Worker struct {
-	Id       int64
-	Busy     bool
-	Hostname string
+// A worker and its associated mutex.
+type ProtectedWorker struct {
+	worker data.Worker
+	mutex *sync.Mutex
 }
 
-var workers []data.Worker
+var workers []ProtectedWorker
 var workerCounter int64 = 1
+
+var jobs []data.Job
+
+func workerHandler(pWorker ProtectedWorker, job data.Job, args chan int64, results chan<- string) {
+	
+	for arg := range args {
+
+		// Claim this worker so no other job can use it simultaneously
+		pWorker.mutex.Lock()
+
+		job.ParameterStart = arg
+
+		jobBytes := data.JobToJson(job)
+
+		resp, err := http.Post("http://"+pWorker.worker.Hostname+"/newjob",
+			"text/plain", bytes.NewReader(jobBytes))
+		if err == nil {
+			
+			// Put the bytes from the request into a file
+			buf := new(bytes.Buffer)
+			buf.ReadFrom(resp.Body)
+
+			results <- buf.String()
+
+		} else {
+			// Write the argument back to the channel so this worker can try it again
+			// or another worker can try it.
+			args <- arg
+
+			// Wait a bit of time so another worker has a chance to take the job if one
+			// is available. We don't want this worker to fail a job and pick it up
+			// immediately for it to fail again.
+			time.Sleep(time.Millisecond * 250)
+		}
+
+		pWorker.mutex.Unlock()
+	}
+}
 
 // Handle the submission of a new job.
 func new_job(w http.ResponseWriter, req *http.Request) {
+
 	fmt.Println("Handling connection...")
 
 	// Parse the HTTP request.
@@ -38,45 +79,47 @@ func new_job(w http.ResponseWriter, req *http.Request) {
 
 	job := data.JsonToJob(buf)
 
-	// Set up argument information.
-	argRange := job.ParameterEnd - job.ParameterStart
-	argInterval := argRange / int64(len(workers))
+	// Make a sized buffer for arguments
+	args := make(chan int64, job.ParameterEnd - job.ParameterStart + 1)
+	
+	// Buffer for the results
+	results := make(chan string)
 
-	argStart := job.ParameterStart
-	argEnd := argStart + argInterval
+	var responses string
 
-	// array to store responses
-	var responses []byte
-
-	// Send the job to each worker
+	// Set up a worker goroutine for each of the workers
 	for _, w := range workers {
-		job.ParameterStart = argStart
-		job.ParameterEnd = argEnd
-
-		argStart += argInterval
-		argEnd += argInterval
-
-		jobBytes := data.JobToJson(job)
-
-		resp, err := http.Post("http://"+w.Hostname+"/newjob",
-			"text/plain", bytes.NewReader(jobBytes))
-		if err == nil {
-			// Put the bytes from the request into a file
-			buf := new(bytes.Buffer)
-			buf.ReadFrom(resp.Body)
-			responses = append(responses, buf.Bytes()...)
-		}
+		go workerHandler(w, job, args, results)
 	}
 
+	// If numbered parameters are not used, we need this to still issue the job.
+	if (job.ParameterEnd < job.ParameterStart) {
+		args <- 0
+		responses += <-results
+	}
+
+	// Put each argument in the buffer
+	for i := job.ParameterStart; i <= job.ParameterEnd; i++ {
+		args <- i
+	}
+
+	// Retrieve each response.
+	for i := job.ParameterStart; i <= job.ParameterEnd; i++ {
+		responses += <-results
+	}
+
+	// Close the argument buffer
+	close(args)
+
 	// Send a response back.
-	w.Write(responses)
+	w.Write([]byte(responses))
 }
 
 // Look through a list and add the item if it isn't in the list already.
 // This is slow for big lists, but there won't likely be a large number of workers.
-func appendIfUnique(list []data.Worker, w data.Worker) []data.Worker {
+func appendIfUnique(list []ProtectedWorker, w ProtectedWorker) []ProtectedWorker {
 	for _, x := range list {
-		if x.Hostname == w.Hostname {
+		if x.worker.Hostname == w.worker.Hostname {
 			return list
 		}
 	}
@@ -105,11 +148,12 @@ func register(w http.ResponseWriter, req *http.Request) {
 
 	worker := data.Worker{Id: workerCounter, Busy: false,
 		Hostname: strings.Join(split, ":")}
+	pWorker := ProtectedWorker{worker, &sync.Mutex{}}
 
 	workerCounter += 1
 
 	// We don't need multiple workers with the same hostname.
-	workers = appendIfUnique(workers, worker)
+	workers = appendIfUnique(workers, pWorker)
 
 	w.Write(data.WorkerToJson(worker))
 }
