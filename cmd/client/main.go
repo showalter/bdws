@@ -3,6 +3,7 @@ package main
 
 import (
 	"bytes"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -19,40 +20,21 @@ import (
 // The entry point of the program
 func main() {
 
-	// A start index greater than the end index indicates the program should be run once
-	// with no parameters.
-	var start int64 = 0
-	var end int64 = -1
+	// Declare variables
+	var hostName string
+	var fullFileName string
+	var start int64
+	var end int64
+	var args []string
+	var runs int64
 
-	var err error
+	// Parse command line
+	parseCommandLine(&hostName, &fullFileName, &start, &end, &args, &runs)
 
-	// The command line arguments. args[0] is the name of the program.
-	args := os.Args
-
-	// If the right number of arguments weren't passed, ask for them and exit.
-	if len(args) < 3 {
-		fmt.Println("Please pass the address of the supervisor and a file to run, and an optional range of parameters.")
-		fmt.Println("Example: http://stu.cs.jmu.edu:4001 fun_code.py [1-10]")
-		os.Exit(1)
-	}
-
-	// Collect arguments if they're given
-	if len(args) == 4 {
-		split := strings.Split(args[3], "-")
-		if len(split) != 2 {
-			fmt.Println("Please give the parameter range as two dash-delimited numbers. For example, 1-100")
-			os.Exit(1)
-		}
-
-		start, err = strconv.ParseInt(split[0], 10, 64)
-		check(err)
-
-		end, err = strconv.ParseInt(split[1], 10, 64)
-		check(err)
-	}
+	fmt.Printf("hostName=%s, fullFileName=%s, start=%d, end=%d, args=%s, runs=%d\n", hostName, fullFileName, start, end, args, runs)
 
 	// Get extension and file name
-	fileName, extension := getFileName(args[2])
+	fileName, extension := getFileName(fullFileName)
 
 	// Code is unessesary to send if executable exists
 	var code []byte
@@ -62,7 +44,7 @@ func main() {
 		// File is not an binary executable, so copy code
 		// Open the file whose name was passed as an argument.
 		var err error
-		code, err = ioutil.ReadFile(args[2])
+		code, err = ioutil.ReadFile(fullFileName)
 		if err != nil {
 			fmt.Println("Error opening file. Aborting")
 			os.Exit(3)
@@ -70,10 +52,10 @@ func main() {
 	}
 
 	// Make a job with the given code.
-	jobBytes := data.JobDataToJson(1, time.Now(), 2, start, end, fileName, extension, code)
+	jobBytes := data.JobDataToJson(1, time.Now(), 2, start, end, fileName, extension, code, args, runs)
 
 	// Send a post request to the supervisor.
-	resp, err := http.Post(args[1]+"/newjob",
+	resp, err := http.Post(hostName+"/newjob",
 		"text/plain", bytes.NewReader(jobBytes))
 	if err != nil {
 		fmt.Println("Error posting job. Aborting")
@@ -90,6 +72,52 @@ func main() {
 }
 
 /* ----- Helper functions ----- */
+func parseCommandLine(hostname *string, fullFileName *string, start *int64, end *int64, args *[]string, runs *int64) {
+	// Optional flags
+	argsPtr := flag.String("args", "NONE", "Command line args for file\nExample: -args \"-al\" when running ls")
+	rangePtr := flag.String("range", "NONE", "Range for job\nExample: -range 1-10")
+	runs = flag.Int64("runs", 1, "Number of times to run job")
+	flag.Parse()
+
+	*args = strings.Split(*argsPtr, " ")
+
+	// Non optional command line argsgi
+	tail := flag.Args()
+
+	// If the right number of arguments weren't passed, ask for them and exit.
+	if len(tail) < 2 {
+		fmt.Println("Please pass the address of the supervisor and a file to run, and an optional range of parameters.")
+		fmt.Println("\tExample: {optional flags} http://stu.cs.jmu.edu:4001 fun_code.py")
+		fmt.Println("\tRun ./client -h for more info on optional flags")
+		os.Exit(1)
+	} else {
+		*hostname = tail[0]
+		*fullFileName = tail[1]
+	}
+
+	// Set the range
+	// A start index greater than the end index indicates the program should be run once
+	// with no parameters.
+	*start = 0
+	*end = -1
+
+	var err error
+
+	// Get range if specified with flag
+	if *rangePtr != "NONE" {
+		split := strings.Split(*rangePtr, "-")
+		if len(split) != 2 {
+			fmt.Println("Please give the parameter range as two dash-delimited numbers. For example, 1-100")
+			os.Exit(1)
+		}
+
+		*start, err = strconv.ParseInt(split[0], 10, 64)
+		check(err)
+
+		*end, err = strconv.ParseInt(split[1], 10, 64)
+		check(err)
+	}
+}
 
 // Check for an error.
 func check(e error) {
