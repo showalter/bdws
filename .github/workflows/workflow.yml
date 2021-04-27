@@ -62,5 +62,5 @@ jobs:
               LICENSE.md
               CHANGELOG.md
             search_paths: |
-                /
+                /github/workspace/
 
