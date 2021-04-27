@@ -26,9 +26,11 @@
 ### Worker(s)
 - ./worker {hostname}:{supervisor_port} {worker_port}
 ### Client
-- ./client {hostname}:{supervisor_port} {path to file name} {optional arg}
-    - {optional arg}: a range of numbers to distribute work, for example: 1-10
-        - splits the job up amongst workers
+- ./client {optional flags} {hostname}:{supervisor_port} {path to file name}
+    - {optional flags}: 
+        - -args: Command line args for file, for example "-la" when using ls
+        - -range: A range of numbers to distribute work, for example: 1-10
+        - -runs: Number of times to run the file
 
 ## With script
 ### Setup
