@@ -62,6 +62,6 @@ jobs:
               LICENSE.md
             search_paths: |
                 /
-                /docs
+                docs/
 
 

@@ -10,7 +10,8 @@
 ## Supervisor Description
 
 - Number: 1
-- Description: Handles worker registration and accepts jobs from clients. Distributes jobs amongst workers and sends results to the client.
+- Description: Handles worker registration and accepts jobs from clients.
+  Distributes jobs amongst workers and sends results to the client.
 
 ## Worker Description
 
@@ -60,11 +61,14 @@
 
 ## Cleanup
 
-For now cleanup is done by using ctrl-c on the workers and the supervisor, then exiting all windows. For the script, you can do ctrl-b d to detach from the current window. This will fully exit all running code.
+For now cleanup is done by using ctrl-c on the workers and the supervisor,
+then exiting all windows. For the script, you can do ctrl-b d to detach from
+the current window. This will fully exit all running code.
 
 ## Testing
 
-A good way to test our program and get an idea of how the work is distributed is to use this script:
+A good way to test our program and get an idea of how the work is distributed
+is to use this script:
 
 ```bash
 #!/usr/bin/env bash
@@ -72,7 +76,9 @@ A good way to test our program and get an idea of how the work is distributed is
 echo $1
 ```
 
-The optional arg is a range split amongst workers. For 1-10, the supervisor will create 10 jobs and split it amongst the workers. The output should be the numbers 1-10 printed out in no particular order.
+The optional arg is a range split amongst workers. For 1-10, the supervisor
+will create 10 jobs and split it amongst the workers.
+The output should be the numbers 1-10 printed out in no particular order.
 
 ## Supported File Types
 
