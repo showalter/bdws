@@ -17,7 +17,7 @@ tolerance to allow work to be reassigned if a worker disconnects and wasn't
 able to complete it. After developing this system, we plan to analyze the
 performance of the systemand the effectiveness of it.There are plenty of
 other systems that do job management, like SLURM, HTCondor, and BOINC-based
-projects, but they all have a complex setup process that requires
+projects, but they all have a complex setup process that$ requires
 administrator privileges.
 
 ## **2 Methods**
