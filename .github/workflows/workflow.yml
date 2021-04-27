@@ -60,8 +60,7 @@ jobs:
         with:
             exclude:
               LICENSE.md
+              CHANGELOG.md
             search_paths: |
                 /
-                docs/
-
 
