@@ -35,14 +35,14 @@
 ## With script
 ### Setup
 - ./simple_test.sh
-    - -hn {hostname}: specify hostname. Default = http://127.0.0.1
-    - -sp {supervisor port}: specify the supervisor port. Default = 5001
-    - -wc {workers}: specify number of workers. Default = 1
+    - -hn {hostname}: specify hostname (Default = http://127.0.0.1)
+    - -sp {supervisor port}: specify the supervisor port (Default = 5001)
+    - -wc {workers}: specify number of workers (Default = 1)
 ### Client
 - Same as manual use
 
-## Clean up
-For now clean up is done by using ctrl-c on the workers and the supervisor, then exiting all windows. For the script, you can do ctrl-b d to detatch from the current window. This will fully exit all running code.
+## Cleanup
+For now cleanup is done by using ctrl-c on the workers and the supervisor, then exiting all windows. For the script, you can do ctrl-b d to detach from the current window. This will fully exit all running code.
 
 ## Testing
 A good way to test our program and get an idea of how the work is distributed is to use this script:
@@ -58,5 +58,5 @@ The optional arg is a range split amongst workers. For 1-10, the supervisor will
 - .class
 - .sh
 - .py
-- scripts (with env included in file)
-- bash executables (ls, hostname, etc.)
+- portable executables (with env included in file)
+- system programs (ls, hostname, etc.)
