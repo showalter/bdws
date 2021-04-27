@@ -20,7 +20,19 @@ import (
 // The entry point of the program
 func main() {
 
-	hostName, fullFileName, start, end, args, runs := parseCommandLine()
+	// Declare variables
+	var hostName string
+	var fullFileName string
+	var start int64
+	var end int64
+	var args []string
+	var runs int64
+
+	// Parse command line
+	parseCommandLine(&hostName, &fullFileName, &start, &end, &args, &runs)
+
+	fmt.Printf("hostName=%s, fullFileName=%s, start=%d, end=%d, args=%s, runs=%d\n", hostName, fullFileName, start, end, args, runs)
+
 	// Get extension and file name
 	fileName, extension := getFileName(fullFileName)
 
@@ -60,13 +72,14 @@ func main() {
 }
 
 /* ----- Helper functions ----- */
-
-func parseCommandLine() (string, string, int64, int64, []string, int64) {
+func parseCommandLine(hostname *string, fullFileName *string, start *int64, end *int64, args *[]string, runs *int64) {
 	// Optional flags
-	argsPtr := flag.String("args", "NONE", "Command line args for file")
-	rangePtr := flag.String("range", "NONE", "Range for job")
-	runsPtr := flag.Int64("runs", 1, "Number of times to run job")
+	argsPtr := flag.String("args", "NONE", "Command line args for file\nExample: -args \"-al\" when running ls")
+	rangePtr := flag.String("range", "NONE", "Range for job\nExample: -range 1-10")
+	runs = flag.Int64("runs", 1, "Number of times to run job")
 	flag.Parse()
+
+	*args = strings.Split(*argsPtr, " ")
 
 	// Non optional command line argsgi
 	tail := flag.Args()
@@ -77,13 +90,16 @@ func parseCommandLine() (string, string, int64, int64, []string, int64) {
 		fmt.Println("\tExample: {optional flags} http://stu.cs.jmu.edu:4001 fun_code.py")
 		fmt.Println("\tRun ./client -h for more info on optional flags")
 		os.Exit(1)
+	} else {
+		*hostname = tail[0]
+		*fullFileName = tail[1]
 	}
 
 	// Set the range
 	// A start index greater than the end index indicates the program should be run once
 	// with no parameters.
-	var start int64 = 0
-	var end int64 = -1
+	*start = 0
+	*end = -1
 
 	var err error
 
@@ -95,14 +111,12 @@ func parseCommandLine() (string, string, int64, int64, []string, int64) {
 			os.Exit(1)
 		}
 
-		start, err = strconv.ParseInt(split[0], 10, 64)
+		*start, err = strconv.ParseInt(split[0], 10, 64)
 		check(err)
 
-		end, err = strconv.ParseInt(split[1], 10, 64)
+		*end, err = strconv.ParseInt(split[1], 10, 64)
 		check(err)
 	}
-
-	return tail[0], tail[1], start, end, strings.Split(*argsPtr, " "), *runsPtr
 }
 
 // Check for an error.
