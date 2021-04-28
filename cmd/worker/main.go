@@ -50,8 +50,8 @@ func check(e error) {
 // Run a given command.
 func run(command string, args ...string) []byte {
 
-	output, err := exec.Command(command, args...).CombinedOutput()
-	check(err)
+	output, _ := exec.Command(command, args...).CombinedOutput()
+	// check(err)
 	return output
 }
 
@@ -113,7 +113,6 @@ func main() {
 	// This gives what the supervisor thinks the worker is, which is useful for debugging.
 	_ = data.JsonToWorker(buf.Bytes())
 
-
 	// Make a directory for this worker, to avoid IO errors from workers writing and reading to
 	// the same file.
 	workerDirectory = args[2]
@@ -150,7 +149,7 @@ func script(code []byte, fileName string, arg *int64) []byte {
 
 	var output []byte
 
-	fullName := workerDirectory+"/"+fileName
+	fullName := workerDirectory + "/" + fileName
 
 	// Create a temporary file
 	createFile(fullName, code)
@@ -176,7 +175,7 @@ func javaClass(code []byte, fileName string, arg *int64) []byte {
 
 	var output []byte
 
-	fullName := workerDirectory+"/"+fileName
+	fullName := workerDirectory + "/" + fileName
 
 	// Create temporary file
 	createFile(fullName, code)
@@ -198,19 +197,19 @@ func javaClass(code []byte, fileName string, arg *int64) []byte {
 // Run a .java file
 func javaFile(code []byte, fileName string, arg *int64) []byte {
 
-	fullName := workerDirectory+"/"+fileName
+	fullName := workerDirectory + "/" + fileName
 
 	// Create temporary java file
 	className := strings.Split(fileName, ".")[0] + ".class"
 
 	_, err := os.Stat(fullName)
-    if os.IsNotExist(err) {
-        createFile(fullName, code)
-		
+	if os.IsNotExist(err) {
+		createFile(fullName, code)
+
 		// compile java file
 		run("javac", fullName)
 
-    } else {
+	} else {
 		existingCode, err := ioutil.ReadFile(fullName)
 		check(err)
 
@@ -222,9 +221,8 @@ func javaFile(code []byte, fileName string, arg *int64) []byte {
 		}
 	}
 
-
 	// get []byte code from class file
-	classCode, err := ioutil.ReadFile(workerDirectory+"/"+className)
+	classCode, err := ioutil.ReadFile(workerDirectory + "/" + className)
 	if err != nil {
 		panic(err)
 	}
@@ -242,7 +240,7 @@ func jarFile(code []byte, fileName string, arg *int64) []byte {
 
 	var output []byte
 
-	fullName := workerDirectory+"/"+fileName
+	fullName := workerDirectory + "/" + fileName
 
 	// Create temporary file
 	createFile(fullName, code)
@@ -265,7 +263,7 @@ func pythonScript(code []byte, fileName string, arg *int64) []byte {
 
 	var output []byte
 
-	fullName := workerDirectory+"/"+fileName
+	fullName := workerDirectory + "/" + fileName
 
 	// Create temporary file
 	createFile(fullName, code)
