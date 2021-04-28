@@ -189,7 +189,7 @@ func javaClass(code []byte, fileName string, num *int64, args []string) []byte {
 		args = append([]string{strconv.FormatInt(*num, 10)}, args...)
 	}
 
-	args = append([]string{"-cp", workerDirectory, strings.Split(fileName, ".")[0]})
+	args = append([]string{"-cp", workerDirectory, strings.Split(fileName, ".")[0]}, args...)
 	output = run("java", args...)
 
 	// Remove temp file
