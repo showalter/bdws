@@ -3,6 +3,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -177,6 +178,26 @@ func register(w http.ResponseWriter, req *http.Request) {
 	w.Write(data.WorkerToJson(worker))
 }
 
+func startHttpServer(wg *sync.WaitGroup, port string) *http.Server {
+	srv := &http.Server{Addr: port}
+
+	// If there is a request for /newjob,
+	// the new_job routine will handle it.
+	http.HandleFunc("/newjob", new_job)
+
+	// Handle requests for /register with the register function
+	http.HandleFunc("/register", register)
+
+	// Have thread handle server
+	go func() {
+		defer wg.Done()
+		// Listen on a port.
+		srv.ListenAndServe()
+	}()
+
+	return srv
+}
+
 // The entry point of the program.
 func main() {
 
@@ -189,13 +210,25 @@ func main() {
 		os.Exit(1)
 	}
 
-	// If there is a request for /newjob,
-	// the new_job routine will handle it.
-	http.HandleFunc("/newjob", new_job)
+	httpServerExit := &sync.WaitGroup{}
+	httpServerExit.Add(1)
 
-	// Handle requests for /register with the register function
-	http.HandleFunc("/register", register)
+	// Start server
+	srv := startHttpServer(httpServerExit, args[1])
 
-	// Listen on a port.
-	http.ListenAndServe(args[1], nil)
+	running := true
+	var input string
+
+	// Wait until user inputs STOP
+	for running {
+		fmt.Scanln(&input)
+		if input == "STOP" {
+			running = false
+		}
+	}
+
+	// Shutdown server and wait for it to cleanly exit
+	srv.Shutdown(context.Background())
+	httpServerExit.Wait()
+	fmt.Println("\n----- SERVER CLOSED -----")
 }
