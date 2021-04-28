@@ -122,7 +122,7 @@ func main() {
 	// the same file.
 	workerDirectory = args[2]
 	if _, err = os.Stat(workerDirectory); os.IsNotExist(err) {
-		err = os.Mkdir(args[2], 755)
+		err = os.Mkdir(args[2], 0777)
 		check(err)
 	}
 
