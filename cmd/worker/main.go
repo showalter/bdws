@@ -50,8 +50,8 @@ func check(e error) {
 // Run a given command.
 func run(command string, args ...string) []byte {
 
-	output, err := exec.Command(command, args...).CombinedOutput()
-	check(err)
+	output, _ := exec.Command(command, args...).CombinedOutput()
+	// check(err)
 	return output
 }
 
