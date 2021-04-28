@@ -20,8 +20,6 @@ type ProtectedWorker struct {
 	mutex  *sync.Mutex
 }
 
-const MAX_CONSECUTIVE_FAILURES = 3
-
 var workers []ProtectedWorker
 var workerCounter int64 = 1
 
@@ -38,8 +36,6 @@ func workerHandler(pWorker ProtectedWorker, job data.Job, args chan int64, resul
 
 		jobBytes := data.JobToJson(job)
 
-		consecutiveFailures := 0
-
 		resp, err := http.Post("http://"+pWorker.worker.Hostname+"/newjob",
 			"text/plain", bytes.NewReader(jobBytes))
 		if err == nil {
@@ -50,28 +46,7 @@ func workerHandler(pWorker ProtectedWorker, job data.Job, args chan int64, resul
 
 			results <- buf.String()
 
-			consecutiveFailures = 0
-
 		} else {
-
-			consecutiveFailures++
-
-			if consecutiveFailures == MAX_CONSECUTIVE_FAILURES {
-
-				pWorker.mutex.Unlock()
-
-				// Try to get what's in the buffer.
-				// Put the bytes from the request into a file
-				buf := new(bytes.Buffer)
-				_, err = buf.ReadFrom(resp.Body)
-
-				if err == nil {
-					results <- buf.String()
-				}
-
-				return
-
-			}
 
 			// Write the argument back to the channel so this worker can try it again
 			// or another worker can try it.
