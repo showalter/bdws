@@ -58,7 +58,9 @@ jobs:
       - name: My Markdown Linter
         uses: ruzickap/action-my-markdown-linter@v0.0.1
         with:
+            exclude:
+              LICENSE.md
+              CHANGELOG.md
             search_paths: |
-                docs/
-
+                /github/workspace/
 

@@ -15,7 +15,7 @@ import (
 	"github.com/showalter/bdws/internal/data"
 )
 
-type codeFunction func([]byte, string, *int64) []byte
+type codeFunction func([]byte, string, *int64, []string) []byte
 
 // Map various extension names to their code
 var extensionMap = map[string]codeFunction{
@@ -31,10 +31,10 @@ var extensionMap = map[string]codeFunction{
 var workerDirectory string
 
 // run the code given an extension
-func runCode(e string, code []byte, fn string, arg *int64) []byte {
+func runCode(e string, code []byte, fn string, num *int64, args []string) []byte {
 	f, found := extensionMap[e]
 	if found {
-		return f(code, fn, arg)
+		return f(code, fn, num, args)
 	} else {
 		return []byte("Error: Extension not found.")
 	}
@@ -75,14 +75,19 @@ func new_job(w http.ResponseWriter, req *http.Request) {
 	// Convert string json to job struct
 	job := data.JsonToJob([]byte(jobJson))
 
-	var arg *int64 = nil
+	var num *int64 = nil
 
 	if job.ParameterEnd >= job.ParameterStart {
-		arg = &job.ParameterStart
+		num = &job.ParameterStart
+	}
+
+	var args []string
+	if job.Args[0] != "NONE" {
+		args = job.Args
 	}
 
 	// Run the code and get []byte output
-	output := runCode(job.Extension, job.Code, job.FileName, arg)
+	output := runCode(job.Extension, job.Code, job.FileName, num, args)
 
 	// Send a response back.
 	w.Write(output)
@@ -145,7 +150,7 @@ func createFile(name string, code []byte) {
 }
 
 // Run a bash script / script
-func script(code []byte, fileName string, arg *int64) []byte {
+func script(code []byte, fileName string, num *int64, args []string) []byte {
 
 	var output []byte
 
@@ -158,11 +163,10 @@ func script(code []byte, fileName string, arg *int64) []byte {
 	check(os.Chmod(fullName, 0700))
 
 	// Execute temp file.
-	if arg != nil {
-		output = run(fullName, strconv.FormatInt(*arg, 10))
-	} else {
-		output = run(fullName, "")
+	if num != nil {
+		args = append([]string{strconv.FormatInt(*num, 10)}, args...)
 	}
+	output = run(fullName, args...)
 
 	// Remove temp file.
 	// os.Remove(fullName)
@@ -171,7 +175,7 @@ func script(code []byte, fileName string, arg *int64) []byte {
 }
 
 // Run a .class file
-func javaClass(code []byte, fileName string, arg *int64) []byte {
+func javaClass(code []byte, fileName string, num *int64, args []string) []byte {
 
 	var output []byte
 
@@ -181,12 +185,12 @@ func javaClass(code []byte, fileName string, arg *int64) []byte {
 	createFile(fullName, code)
 
 	// Execute temp file.
-	if arg != nil {
-		output = run("java", "-cp", workerDirectory, strings.Split(fileName, ".")[0],
-			strconv.FormatInt(*arg, 10))
-	} else {
-		output = run("java", "-cp", workerDirectory, strings.Split(fileName, ".")[0])
+	if num != nil {
+		args = append([]string{strconv.FormatInt(*num, 10)}, args...)
 	}
+
+	args = append([]string{"-cp", workerDirectory, strings.Split(fileName, ".")[0]})
+	output = run("java", args...)
 
 	// Remove temp file
 	// os.Remove(fullName)
@@ -195,7 +199,7 @@ func javaClass(code []byte, fileName string, arg *int64) []byte {
 }
 
 // Run a .java file
-func javaFile(code []byte, fileName string, arg *int64) []byte {
+func javaFile(code []byte, fileName string, num *int64, args []string) []byte {
 
 	fullName := workerDirectory + "/" + fileName
 
@@ -232,11 +236,11 @@ func javaFile(code []byte, fileName string, arg *int64) []byte {
 	// os.Remove(workerDirectory+"/"+className)
 
 	// Return output
-	return (javaClass(classCode, className, arg))
+	return (javaClass(classCode, className, num, args))
 }
 
 // Run a jar file
-func jarFile(code []byte, fileName string, arg *int64) []byte {
+func jarFile(code []byte, fileName string, num *int64, args []string) []byte {
 
 	var output []byte
 
@@ -246,11 +250,13 @@ func jarFile(code []byte, fileName string, arg *int64) []byte {
 	createFile(fullName, code)
 
 	// Execute temp file.
-	if arg != nil {
-		output = run("java", "-jar "+fullName, strconv.FormatInt(*arg, 10))
-	} else {
-		output = run("java", "-jar "+fullName)
+
+	if num != nil {
+		args = append([]string{strconv.FormatInt(*num, 10)}, args...)
 	}
+
+	args = append([]string{"-jar", fullName}, args...)
+	output = run("java", args...)
 
 	// Remove temp file
 	// os.Remove(fullName)
@@ -259,7 +265,7 @@ func jarFile(code []byte, fileName string, arg *int64) []byte {
 }
 
 // Run a python script
-func pythonScript(code []byte, fileName string, arg *int64) []byte {
+func pythonScript(code []byte, fileName string, num *int64, args []string) []byte {
 
 	var output []byte
 
@@ -269,11 +275,11 @@ func pythonScript(code []byte, fileName string, arg *int64) []byte {
 	createFile(fullName, code)
 
 	// Execute temp script.
-	if arg != nil {
-		output = run("python3", fullName, strconv.FormatInt(*arg, 10))
-	} else {
-		output = run("python3", fullName)
+	if num != nil {
+		args = append([]string{strconv.FormatInt(*num, 10)}, args...)
 	}
+	args = append([]string{fullName}, args...)
+	output = run("python3", args...)
 
 	// Remove temp script
 	// os.Remove(fullName)
@@ -282,15 +288,14 @@ func pythonScript(code []byte, fileName string, arg *int64) []byte {
 }
 
 // Run a system program
-func system_program(code []byte, fileName string, arg *int64) []byte {
+func system_program(code []byte, fileName string, num *int64, args []string) []byte {
 
 	var output []byte
 
-	if arg != nil {
-		output = run(fileName, strconv.FormatInt(*arg, 10))
-	} else {
-		output = run(fileName)
+	if num != nil {
+		args = append([]string{strconv.FormatInt(*num, 10)}, args...)
 	}
+	output = run(fileName, args...)
 
 	return output
 }
