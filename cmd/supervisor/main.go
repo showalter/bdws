@@ -3,6 +3,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -17,7 +18,7 @@ import (
 // A worker and its associated mutex.
 type ProtectedWorker struct {
 	worker data.Worker
-	mutex *sync.Mutex
+	mutex  *sync.Mutex
 }
 
 var workers []ProtectedWorker
@@ -26,7 +27,7 @@ var workerCounter int64 = 1
 var jobs []data.Job
 
 func workerHandler(pWorker ProtectedWorker, job data.Job, args chan int64, results chan<- string) {
-	
+
 	for arg := range args {
 
 		// Claim this worker so no other job can use it simultaneously
@@ -39,7 +40,7 @@ func workerHandler(pWorker ProtectedWorker, job data.Job, args chan int64, resul
 		resp, err := http.Post("http://"+pWorker.worker.Hostname+"/newjob",
 			"text/plain", bytes.NewReader(jobBytes))
 		if err == nil {
-			
+
 			// Put the bytes from the request into a file
 			buf := new(bytes.Buffer)
 			buf.ReadFrom(resp.Body)
@@ -80,8 +81,8 @@ func new_job(w http.ResponseWriter, req *http.Request) {
 	job := data.JsonToJob(buf)
 
 	// Make a sized buffer for arguments
-	args := make(chan int64, job.ParameterEnd - job.ParameterStart + 1)
-	
+	args := make(chan int64, job.ParameterEnd-job.ParameterStart+1)
+
 	// Buffer for the results
 	results := make(chan string)
 
@@ -93,7 +94,7 @@ func new_job(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// If numbered parameters are not used, we need this to still issue the job.
-	if (job.ParameterEnd < job.ParameterStart) {
+	if job.ParameterEnd < job.ParameterStart {
 		args <- 0
 		responses += <-results
 	}
@@ -158,6 +159,26 @@ func register(w http.ResponseWriter, req *http.Request) {
 	w.Write(data.WorkerToJson(worker))
 }
 
+func startHttpServer(wg *sync.WaitGroup, port string) *http.Server {
+	srv := &http.Server{Addr: port}
+
+	// If there is a request for /newjob,
+	// the new_job routine will handle it.
+	http.HandleFunc("/newjob", new_job)
+
+	// Handle requests for /register with the register function
+	http.HandleFunc("/register", register)
+
+	// Have thread handle server
+	go func() {
+		defer wg.Done()
+		// Listen on a port.
+		srv.ListenAndServe()
+	}()
+
+	return srv
+}
+
 // The entry point of the program.
 func main() {
 
@@ -170,13 +191,25 @@ func main() {
 		os.Exit(1)
 	}
 
-	// If there is a request for /newjob,
-	// the new_job routine will handle it.
-	http.HandleFunc("/newjob", new_job)
+	httpServerExit := &sync.WaitGroup{}
+	httpServerExit.Add(1)
 
-	// Handle requests for /register with the register function
-	http.HandleFunc("/register", register)
+	// Start server
+	srv := startHttpServer(httpServerExit, args[1])
 
-	// Listen on a port.
-	http.ListenAndServe(args[1], nil)
+	running := true
+	var input string
+
+	// Wait until user inputs STOP
+	for running {
+		fmt.Scanln(&input)
+		if input == "STOP" {
+			running = false
+		}
+	}
+
+	// Shutdown server and wait for it to cleanly exit
+	srv.Shutdown(context.Background())
+	httpServerExit.Wait()
+	fmt.Println("\n----- SERVER CLOSED -----")
 }
