@@ -31,8 +31,6 @@ func main() {
 	// Parse command line
 	parseCommandLine(&hostName, &fullFileName, &start, &end, &args, &runs)
 
-	fmt.Printf("hostName=%s, fullFileName=%s, start=%d, end=%d, args=%s, runs=%d\n", hostName, fullFileName, start, end, args, runs)
-
 	// Get extension and file name
 	fileName, extension := getFileName(fullFileName)
 
@@ -68,7 +66,6 @@ func main() {
 	file := buf.String()
 
 	fmt.Println(file)
-
 }
 
 /* ----- Helper functions ----- */
@@ -154,7 +151,6 @@ func findAbsolute(fileName string) string {
 // Get the filename and extension type of a file
 func getFileName(arg string) (string, string) {
 	abs := findAbsolute(arg)
-	fmt.Println(abs)
 
 	// Get file name
 	fullPath := strings.Split(abs, "/")
