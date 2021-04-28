@@ -1,5 +1,7 @@
 # Basic Distributed Work System
 
+![logo](logo.png)
+
 ## Authors
 
 - Ryan Showalter
