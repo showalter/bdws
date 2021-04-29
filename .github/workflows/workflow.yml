@@ -48,6 +48,14 @@ jobs:
           golint cmd/supervisor/main.go
           golint internal/data/save_object.go
       
+      # Run Go fmt
+      - name: Run go fmt
+        run: |
+          go fmt cmd/client/main.go
+          go fmt cmd/worker/main.go
+          go fmt cmd/supervisor/main.go
+          go fmt internal/data/save_object.go
+      
       # Run tests
       # Using test directory and Go tests
       - name: Test
