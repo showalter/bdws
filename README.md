@@ -52,10 +52,14 @@
 
 ### Setup with script
 
-- ./simple_test.sh
+- ./simple_test.sh {optional flags}
   - -hn {hostname}: specify hostname (Default = 'http://127.0.0.1')
   - -sp {supervisor port}: specify the supervisor port (Default = 5001)
   - -wc {workers}: specify number of workers (Default = 1)
+  - -p {panes}: specify number of panes per window (Default = 4)
+  - -i: only use this when tmux is configured to start numbering windows at
+1, instead of default 0. To find if 1 is configured, look for "set-option
+-g base-index 1" in local tmux.conf file.
   
 ### Client setup with script
 
@@ -63,8 +67,8 @@
 
 ## Cleanup
 
-For now cleanup is done by using ctrl-c on the workers and the supervisor,
-then exiting all windows. For the script, you can do ctrl-b d to detach from
+For now, cleanup is done by using CTRL-C on the workers and the supervisor,
+then exiting all windows. For the script, you can do CTRL-B + D to detach from
 the current window. This will fully exit all running code.
 
 ## Testing
