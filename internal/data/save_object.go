@@ -66,6 +66,8 @@ type Job struct {
 	FileName       string
 	Extension      string
 	Code           []byte
+	Args           []string
+	Nruns          int64
 }
 
 /**
@@ -88,10 +90,10 @@ func JobToJson(job Job) []byte {
  * Saves a Job information into json
  */
 func JobDataToJson(id int64, time time.Time, machines int64,
-	parameterStart int64, parameterEnd int64, fileName string, extension string, code []byte) []byte {
+	parameterStart int64, parameterEnd int64, fileName string, extension string, code []byte, args []string, nruns int64) []byte {
 
 	// Create Job Object
-	j := Job{id, time, machines, parameterStart, parameterEnd, fileName, extension, code}
+	j := Job{id, time, machines, parameterStart, parameterEnd, fileName, extension, code, args, nruns}
 
 	return JobToJson(j)
 }
@@ -114,51 +116,51 @@ func JsonToJob(b []byte) Job {
 }
 
 type Worker struct {
-    Id int64
-    Busy bool
+	Id       int64
+	Busy     bool
 	Hostname string
 }
 
 /**
  * Saves a Worker information into json
  */
- func WorkerToJson(worker Worker) []byte{
+func WorkerToJson(worker Worker) []byte {
 
-    // Save c as json byte array
-    b, err := json.Marshal(worker)
+	// Save c as json byte array
+	b, err := json.Marshal(worker)
 
-    // Exit on error, otherwise return b
-    if err != nil {
-        log.Println(err)
-        os.Exit(-1)
-    }
-    return b
+	// Exit on error, otherwise return b
+	if err != nil {
+		log.Println(err)
+		os.Exit(-1)
+	}
+	return b
 }
 
 /**
  * Saves a Worker information into json
  */
- func WorkerDataToJson(id int64, busy bool, hostname string) []byte{
+func WorkerDataToJson(id int64, busy bool, hostname string) []byte {
 
-    // Create Worker Object
-    w := Worker{id, busy, hostname}
+	// Create Worker Object
+	w := Worker{id, busy, hostname}
 
-    return WorkerToJson(w)
+	return WorkerToJson(w)
 }
 
 /**
  * Coverts a []byte of json into a Worker struct
  */
 func JsonToWorker(b []byte) Worker {
-    var w Worker
+	var w Worker
 
-    // Unmarshall b into Worker w
-    err := json.Unmarshal(b, &w)
+	// Unmarshall b into Worker w
+	err := json.Unmarshal(b, &w)
 
-    // Exit on error, otherwise return j
-    if err != nil {
-        log.Println(err)
-        os.Exit(-1)
-    }
-    return w
+	// Exit on error, otherwise return j
+	if err != nil {
+		log.Println(err)
+		os.Exit(-1)
+	}
+	return w
 }
