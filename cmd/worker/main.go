@@ -15,7 +15,7 @@ import (
 	"github.com/showalter/bdws/internal/data"
 )
 
-type codeFunction func([]byte, string, *int64, []string) []byte
+type codeFunction func([]byte, string, *int, []string) []byte
 
 // Map various extension names to their code
 var extensionMap = map[string]codeFunction{
@@ -31,7 +31,7 @@ var extensionMap = map[string]codeFunction{
 var workerDirectory string
 
 // run the code given an extension
-func runCode(e string, code []byte, fn string, num *int64, args []string) []byte {
+func runCode(e string, code []byte, fn string, num *int, args []string) []byte {
 	f, found := extensionMap[e]
 	if found {
 		return f(code, fn, num, args)
@@ -74,7 +74,7 @@ func new_job(w http.ResponseWriter, req *http.Request) {
 	// Convert string json to job struct
 	job := data.JsonToJob([]byte(jobJson))
 
-	var num *int64 = nil
+	var num *int = nil
 
 	if job.ParameterEnd >= job.ParameterStart {
 		num = &job.ParameterStart
@@ -149,7 +149,7 @@ func createFile(name string, code []byte) {
 }
 
 // Run a bash script / script
-func script(code []byte, fileName string, num *int64, args []string) []byte {
+func script(code []byte, fileName string, num *int, args []string) []byte {
 
 	var output []byte
 
@@ -163,7 +163,7 @@ func script(code []byte, fileName string, num *int64, args []string) []byte {
 
 	// Execute temp file.
 	if num != nil {
-		args = append([]string{strconv.FormatInt(*num, 10)}, args...)
+		args = append([]string{strconv.Itoa(*num)}, args...)
 	}
 	output = run(fullName, args...)
 
@@ -171,7 +171,7 @@ func script(code []byte, fileName string, num *int64, args []string) []byte {
 }
 
 // Run a .class file
-func javaClass(code []byte, fileName string, num *int64, args []string) []byte {
+func javaClass(code []byte, fileName string, num *int, args []string) []byte {
 
 	var output []byte
 
@@ -182,7 +182,7 @@ func javaClass(code []byte, fileName string, num *int64, args []string) []byte {
 
 	// Execute temp file.
 	if num != nil {
-		args = append([]string{strconv.FormatInt(*num, 10)}, args...)
+		args = append([]string{strconv.Itoa(*num)}, args...)
 	}
 
 	args = append([]string{"-cp", workerDirectory, strings.Split(fileName, ".")[0]}, args...)
@@ -192,7 +192,7 @@ func javaClass(code []byte, fileName string, num *int64, args []string) []byte {
 }
 
 // Run a .java file
-func javaFile(code []byte, fileName string, num *int64, args []string) []byte {
+func javaFile(code []byte, fileName string, num *int, args []string) []byte {
 
 	fullName := workerDirectory + "/" + fileName
 
@@ -229,7 +229,7 @@ func javaFile(code []byte, fileName string, num *int64, args []string) []byte {
 }
 
 // Run a jar file
-func jarFile(code []byte, fileName string, num *int64, args []string) []byte {
+func jarFile(code []byte, fileName string, num *int, args []string) []byte {
 
 	var output []byte
 
@@ -241,7 +241,7 @@ func jarFile(code []byte, fileName string, num *int64, args []string) []byte {
 	// Execute temp file.
 
 	if num != nil {
-		args = append([]string{strconv.FormatInt(*num, 10)}, args...)
+		args = append([]string{strconv.Itoa(*num)}, args...)
 	}
 
 	args = append([]string{"-jar", fullName}, args...)
@@ -251,7 +251,7 @@ func jarFile(code []byte, fileName string, num *int64, args []string) []byte {
 }
 
 // Run a python script
-func pythonScript(code []byte, fileName string, num *int64, args []string) []byte {
+func pythonScript(code []byte, fileName string, num *int, args []string) []byte {
 
 	var output []byte
 
@@ -262,7 +262,7 @@ func pythonScript(code []byte, fileName string, num *int64, args []string) []byt
 
 	// Execute temp script.
 	if num != nil {
-		args = append([]string{strconv.FormatInt(*num, 10)}, args...)
+		args = append([]string{strconv.Itoa(*num)}, args...)
 	}
 	args = append([]string{fullName}, args...)
 	output = run("python3", args...)
@@ -271,13 +271,14 @@ func pythonScript(code []byte, fileName string, num *int64, args []string) []byt
 }
 
 // Run a system program
-func system_program(code []byte, fileName string, num *int64, args []string) []byte {
+func system_program(code []byte, fileName string, num *int, args []string) []byte {
 
 	var output []byte
 
 	if num != nil {
-		args = append([]string{strconv.FormatInt(*num, 10)}, args...)
+		args = append([]string{strconv.Itoa(*num)}, args...)
 	}
+
 	output = run(fileName, args...)
 
 	return output

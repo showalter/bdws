@@ -26,7 +26,7 @@ var workerCounter int64 = 1
 
 var jobs []data.Job
 
-func workerHandler(pWorker ProtectedWorker, job data.Job, args chan int64, results chan<- string) {
+func workerHandler(pWorker ProtectedWorker, job data.Job, args chan int, results chan<- string) {
 
 	for arg := range args {
 
@@ -81,11 +81,17 @@ func new_job(w http.ResponseWriter, req *http.Request) {
 
 	job := data.JsonToJob(buf)
 
-	// Make a sized buffer for arguments
-	args := make(chan int64, job.ParameterEnd-job.ParameterStart+1)
+	var args chan int
 
 	// Buffer for the results
 	results := make(chan string)
+
+	// Make a sized buffer for arguments
+	if job.ParameterEnd < job.ParameterStart {
+		args = make(chan int, job.Nruns)
+	} else {
+		args = make(chan int, job.ParameterEnd-job.ParameterStart+1)
+	}
 
 	var responses []string
 
@@ -96,8 +102,15 @@ func new_job(w http.ResponseWriter, req *http.Request) {
 
 	// If numbered parameters are not used, we need this to still issue the job.
 	if job.ParameterEnd < job.ParameterStart {
-		args <- 0
-		responses = append(responses, <-results)
+
+		for i := 0; i < job.Nruns; i++ {
+			args <- 0
+		}
+
+		for i := 0; i < job.Nruns; i++ {
+			responses = append(responses, <-results)
+		}
+
 	}
 
 	// Put each argument in the buffer

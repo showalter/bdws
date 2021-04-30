@@ -9,7 +9,7 @@ import (
 )
 
 type Client struct {
-	Id   int64
+	Id   int
 	Time time.Time
 }
 
@@ -32,7 +32,7 @@ func ClientToJson(client Client) []byte {
 /**
  * Saves a client's information into json
  */
-func ClientDataToJson(id int64, time time.Time) []byte {
+func ClientDataToJson(id int, time time.Time) []byte {
 
 	// Create Client Object
 	c := Client{id, time}
@@ -58,16 +58,16 @@ func JsonToClient(b []byte) Client {
 }
 
 type Job struct {
-	Id             int64
+	Id             int
 	Time           time.Time
-	Machines       int64
-	ParameterStart int64
-	ParameterEnd   int64
+	Machines       int
+	ParameterStart int
+	ParameterEnd   int
 	FileName       string
 	Extension      string
 	Code           []byte
 	Args           []string
-	Nruns          int64
+	Nruns          int
 }
 
 /**
@@ -89,8 +89,8 @@ func JobToJson(job Job) []byte {
 /**
  * Saves a Job information into json
  */
-func JobDataToJson(id int64, time time.Time, machines int64,
-	parameterStart int64, parameterEnd int64, fileName string, extension string, code []byte, args []string, nruns int64) []byte {
+func JobDataToJson(id int, time time.Time, machines int,
+	parameterStart int, parameterEnd int, fileName string, extension string, code []byte, args []string, nruns int) []byte {
 
 	// Create Job Object
 	j := Job{id, time, machines, parameterStart, parameterEnd, fileName, extension, code, args, nruns}
