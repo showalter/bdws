@@ -23,10 +23,10 @@ func main() {
 	// Declare variables
 	var hostName string
 	var fullFileName string
-	var start int64
-	var end int64
+	var start int
+	var end int
 	var args []string
-	var runs int64
+	var runs int
 
 	// Parse command line
 	parseCommandLine(&hostName, &fullFileName, &start, &end, &args, &runs)
@@ -49,6 +49,8 @@ func main() {
 		}
 	}
 
+	fmt.Println("Runs: " + strconv.Itoa(runs))
+
 	// Make a job with the given code.
 	jobBytes := data.JobDataToJson(1, time.Now(), 2, start, end, fileName, extension, code, args, runs)
 
@@ -69,11 +71,11 @@ func main() {
 }
 
 /* ----- Helper functions ----- */
-func parseCommandLine(hostname *string, fullFileName *string, start *int64, end *int64, args *[]string, runs *int64) {
+func parseCommandLine(hostname *string, fullFileName *string, start *int, end *int, args *[]string, runs *int) {
 	// Optional flags
 	argsPtr := flag.String("args", "NONE", "Command line args for file\nExample: -args \"-al\" when running ls")
 	rangePtr := flag.String("range", "NONE", "Range for job\nExample: -range 1-10")
-	runs = flag.Int64("runs", 1, "Number of times to run job")
+	runsPtr := flag.Int("runs", 1, "Number of times to run job")
 	flag.Parse()
 
 	*args = strings.Split(*argsPtr, " ")
@@ -98,6 +100,8 @@ func parseCommandLine(hostname *string, fullFileName *string, start *int64, end 
 	*start = 0
 	*end = -1
 
+	*runs = *runsPtr
+
 	var err error
 
 	// Get range if specified with flag
@@ -108,10 +112,10 @@ func parseCommandLine(hostname *string, fullFileName *string, start *int64, end 
 			os.Exit(1)
 		}
 
-		*start, err = strconv.ParseInt(split[0], 10, 64)
+		*start, err = strconv.Atoi(split[0])
 		check(err)
 
-		*end, err = strconv.ParseInt(split[1], 10, 64)
+		*end, err = strconv.Atoi(split[1])
 		check(err)
 	}
 }
