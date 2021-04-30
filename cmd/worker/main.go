@@ -51,7 +51,6 @@ func check(e error) {
 func run(command string, args ...string) []byte {
 
 	output, _ := exec.Command(command, args...).CombinedOutput()
-	// check(err)
 	return output
 }
 
@@ -168,9 +167,6 @@ func script(code []byte, fileName string, num *int64, args []string) []byte {
 	}
 	output = run(fullName, args...)
 
-	// Remove temp file.
-	// os.Remove(fullName)
-
 	return output
 }
 
@@ -191,9 +187,6 @@ func javaClass(code []byte, fileName string, num *int64, args []string) []byte {
 
 	args = append([]string{"-cp", workerDirectory, strings.Split(fileName, ".")[0]}, args...)
 	output = run("java", args...)
-
-	// Remove temp file
-	// os.Remove(fullName)
 
 	return output
 }
@@ -231,10 +224,6 @@ func javaFile(code []byte, fileName string, num *int64, args []string) []byte {
 		panic(err)
 	}
 
-	// Remove the temp files
-	// os.Remove(fullName)
-	// os.Remove(workerDirectory+"/"+className)
-
 	// Return output
 	return (javaClass(classCode, className, num, args))
 }
@@ -258,9 +247,6 @@ func jarFile(code []byte, fileName string, num *int64, args []string) []byte {
 	args = append([]string{"-jar", fullName}, args...)
 	output = run("java", args...)
 
-	// Remove temp file
-	// os.Remove(fullName)
-
 	return output
 }
 
@@ -280,9 +266,6 @@ func pythonScript(code []byte, fileName string, num *int64, args []string) []byt
 	}
 	args = append([]string{fullName}, args...)
 	output = run("python3", args...)
-
-	// Remove temp script
-	// os.Remove(fullName)
 
 	return output
 }
