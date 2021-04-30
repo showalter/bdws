@@ -68,9 +68,6 @@ func new_job(w http.ResponseWriter, req *http.Request) {
 	buf.ReadFrom(req.Body)
 	jobJson := buf.String()
 
-	// Print out the json.
-	fmt.Println(jobJson)
-
 	// Convert string json to job struct
 	job := data.JsonToJob([]byte(jobJson))
 

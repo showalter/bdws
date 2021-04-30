@@ -49,8 +49,6 @@ func main() {
 		}
 	}
 
-	fmt.Println("Runs: " + strconv.Itoa(runs))
-
 	// Make a job with the given code.
 	jobBytes := data.JobDataToJson(1, time.Now(), 2, start, end, fileName, extension, code, args, runs)
 
@@ -67,7 +65,8 @@ func main() {
 	buf.ReadFrom(resp.Body)
 	file := buf.String()
 
-	fmt.Println(file)
+    fmt.Println(file)
+
 }
 
 /* ----- Helper functions ----- */
